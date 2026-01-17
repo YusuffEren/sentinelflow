@@ -432,10 +432,5 @@ mypy src/
 
 ---
 
-## License
 
-MIT License
 
----
-
-Built for Teknofest 2026
