@@ -1,0 +1,187 @@
+# SentinelFlow - Real-Time Financial Fraud Detection System
+# Docker Compose Configuration - Enterprise Grade
+# -----------------------------------------------------
+# Usage: docker-compose up -d
+# Verify: docker-compose ps
+
+version: '3.9'
+
+services:
+  # =============================================================================
+  # ZOOKEEPER - Kafka Coordination Service
+  # =============================================================================
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: sentinelflow-zookeeper
+    hostname: zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+      ZOOKEEPER_SYNC_LIMIT: 2
+    volumes:
+      - zookeeper_data:/var/lib/zookeeper/data
+      - zookeeper_logs:/var/lib/zookeeper/log
+    networks:
+      - sentinelflow-network
+    healthcheck:
+      test: ["CMD", "echo", "ruok", "|", "nc", "localhost", "2181"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+
+  # =============================================================================
+  # KAFKA - Distributed Event Streaming Platform
+  # =============================================================================
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: sentinelflow-kafka
+    hostname: kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_LOG_RETENTION_HOURS: 168
+      KAFKA_LOG_RETENTION_BYTES: 1073741824
+      KAFKA_MESSAGE_MAX_BYTES: 10485760
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    networks:
+      - sentinelflow-network
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+
+  # =============================================================================
+  # KAFKA-UI - Web UI for Kafka Cluster Monitoring (Optional but recommended)
+  # =============================================================================
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: sentinelflow-kafka-ui
+    depends_on:
+      - kafka
+    ports:
+      - "8080:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: sentinelflow-cluster
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
+    networks:
+      - sentinelflow-network
+    restart: unless-stopped
+
+  # =============================================================================
+  # NEO4J - Graph Database for Relationship & Ring Detection
+  # =============================================================================
+  neo4j:
+    image: neo4j:5.15.0-community
+    container_name: sentinelflow-neo4j
+    hostname: neo4j
+    ports:
+      - "7474:7474"  # HTTP Browser
+      - "7687:7687"  # Bolt Protocol
+    environment:
+      NEO4J_AUTH: neo4j/sentinelflow_secret_2024
+      NEO4J_PLUGINS: '["apoc", "graph-data-science"]'
+      NEO4J_dbms_memory_pagecache_size: 512M
+      NEO4J_dbms_memory_heap_initial__size: 512M
+      NEO4J_dbms_memory_heap_max__size: 1G
+      NEO4J_dbms_security_procedures_unrestricted: apoc.*,gds.*
+      NEO4J_dbms_security_procedures_allowlist: apoc.*,gds.*
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+      - neo4j_plugins:/plugins
+    networks:
+      - sentinelflow-network
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:7474"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+
+  # =============================================================================
+  # REDIS - In-Memory Cache & Geo-Spatial Operations
+  # =============================================================================
+  redis:
+    image: redis:7.2-alpine
+    container_name: sentinelflow-redis
+    hostname: redis
+    ports:
+      - "6379:6379"
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --save 60 1000
+    volumes:
+      - redis_data:/data
+    networks:
+      - sentinelflow-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # =============================================================================
+  # REDIS COMMANDER - Web UI for Redis (Optional but recommended)
+  # =============================================================================
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: sentinelflow-redis-commander
+    depends_on:
+      - redis
+    ports:
+      - "8081:8081"
+    environment:
+      REDIS_HOSTS: local:redis:6379
+    networks:
+      - sentinelflow-network
+    restart: unless-stopped
+
+# =============================================================================
+# NETWORKS
+# =============================================================================
+networks:
+  sentinelflow-network:
+    driver: bridge
+    name: sentinelflow-network
+
+# =============================================================================
+# VOLUMES - Persistent Data Storage
+# =============================================================================
+volumes:
+  zookeeper_data:
+    name: sentinelflow-zookeeper-data
+  zookeeper_logs:
+    name: sentinelflow-zookeeper-logs
+  kafka_data:
+    name: sentinelflow-kafka-data
+  neo4j_data:
+    name: sentinelflow-neo4j-data
+  neo4j_logs:
+    name: sentinelflow-neo4j-logs
+  neo4j_plugins:
+    name: sentinelflow-neo4j-plugins
+  redis_data:
+    name: sentinelflow-redis-data
