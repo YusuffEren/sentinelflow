@@ -108,7 +108,7 @@ A cloud-native, microservices-based fraud detection platform designed for detect
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/yourusername/sentinelflow.git
+git clone https://github.com/yusufferen/sentinelflow.git
 cd sentinelflow
 ```
 
@@ -430,6 +430,7 @@ mypy src/
 ```
 
 ---
+
 
 
 
