@@ -4,7 +4,6 @@
 
 A cloud-native, microservices-based fraud detection platform designed for detecting complex financial fraud patterns including Money Laundering Rings, Mule Accounts, Impossible Travel, and AI-detected anomalies.
 
-Built for Teknofest 2026.
 
 ---
 
@@ -431,6 +430,7 @@ mypy src/
 ```
 
 ---
+
 
 
 
