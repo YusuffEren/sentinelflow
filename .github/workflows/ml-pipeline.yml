@@ -1,0 +1,591 @@
+name: ML Pipeline
+
+on:
+  # Trigger on model or ML code changes
+  push:
+    branches: [main, develop]
+    paths:
+      - 'src/sentinelflow/ml/**'
+      - 'src/sentinelflow/mlops/**'
+      - 'data/**'
+      - 'models/**'
+  
+  # Manual trigger for training
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Action to perform'
+        required: true
+        default: 'validate'
+        type: choice
+        options:
+          - validate
+          - train
+          - benchmark
+          - deploy
+      
+      model_type:
+        description: 'Model type to train'
+        required: false
+        default: 'ensemble'
+        type: choice
+        options:
+          - xgboost
+          - lightgbm
+          - catboost
+          - ensemble
+          - gnn
+      
+      dataset:
+        description: 'Dataset to use'
+        required: false
+        default: 'synthetic'
+        type: choice
+        options:
+          - synthetic
+          - production
+          - competition
+
+  # Weekly retraining
+  schedule:
+    - cron: '0 2 * * 0'  # Every Sunday at 2 AM
+
+env:
+  PYTHON_VERSION: "3.11"
+  MLFLOW_TRACKING_URI: "file:./mlruns"
+
+jobs:
+  # ===========================================================================
+  # Data Validation
+  # ===========================================================================
+  data-validation:
+    name: Data Validation
+    runs-on: ubuntu-latest
+    outputs:
+      data_valid: ${{ steps.validate.outputs.valid }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+          pip install great-expectations pandas
+
+      - name: Validate data schema
+        id: validate
+        run: |
+          python -c "
+          import sys
+          from sentinelflow.ml.competition_dataset import CompetitionDatasetGenerator
+          
+          # Generate sample data
+          gen = CompetitionDatasetGenerator(seed=42, n_users=100)
+          df = gen.generate(n_transactions=1000, fraud_ratio=0.05)
+          
+          # Validate schema
+          required_cols = ['user_id', 'amount', 'is_fraud', 'timestamp']
+          missing = [c for c in required_cols if c not in df.columns]
+          
+          if missing:
+              print(f'Missing columns: {missing}')
+              sys.exit(1)
+          
+          # Validate data types
+          assert df['amount'].dtype in ['float64', 'float32', 'int64']
+          assert df['is_fraud'].dtype in ['int64', 'int32', 'bool']
+          
+          print('Data validation passed!')
+          print(f'Rows: {len(df)}, Columns: {len(df.columns)}')
+          print(f'Fraud ratio: {df.is_fraud.mean():.4f}')
+          "
+          echo "valid=true" >> $GITHUB_OUTPUT
+
+  # ===========================================================================
+  # Model Training
+  # ===========================================================================
+  train:
+    name: Train Model
+    runs-on: ubuntu-latest
+    needs: data-validation
+    if: github.event.inputs.action == 'train' || github.event_name == 'schedule'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Generate training data
+        run: |
+          python -c "
+          from sentinelflow.ml.competition_dataset import CompetitionDatasetGenerator
+          import os
+          
+          os.makedirs('data/training', exist_ok=True)
+          
+          gen = CompetitionDatasetGenerator(seed=42, n_users=10000)
+          df = gen.generate(n_transactions=100000, fraud_ratio=0.03)
+          df.to_parquet('data/training/train_data.parquet', index=False)
+          
+          print(f'Generated {len(df)} training samples')
+          print(f'Fraud ratio: {df.is_fraud.mean():.4f}')
+          "
+
+      - name: Train model
+        run: |
+          python -c "
+          import pandas as pd
+          import json
+          import os
+          from sklearn.model_selection import train_test_split
+          
+          # Load data
+          df = pd.read_parquet('data/training/train_data.parquet')
+          
+          # Prepare features
+          feature_cols = [c for c in df.columns if c not in ['user_id', 'receiver_id', 'is_fraud', 'timestamp', 'transaction_id']]
+          X = df[feature_cols].fillna(0)
+          y = df['is_fraud']
+          
+          X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, stratify=y, random_state=42)
+          
+          # Train XGBoost
+          from xgboost import XGBClassifier
+          from sklearn.metrics import f1_score, roc_auc_score, precision_score, recall_score
+          
+          model = XGBClassifier(
+              n_estimators=200,
+              max_depth=8,
+              learning_rate=0.1,
+              subsample=0.8,
+              colsample_bytree=0.8,
+              random_state=42,
+              eval_metric='logloss',
+          )
+          
+          model.fit(X_train, y_train)
+          
+          # Evaluate
+          y_pred = model.predict(X_test)
+          y_prob = model.predict_proba(X_test)[:, 1]
+          
+          metrics = {
+              'f1': f1_score(y_test, y_pred),
+              'auc_roc': roc_auc_score(y_test, y_prob),
+              'precision': precision_score(y_test, y_pred),
+              'recall': recall_score(y_test, y_pred),
+          }
+          
+          print('Model Metrics:')
+          for k, v in metrics.items():
+              print(f'  {k}: {v:.4f}')
+          
+          # Save model and metrics
+          os.makedirs('models', exist_ok=True)
+          import joblib
+          joblib.dump(model, 'models/fraud_detector.joblib')
+          
+          with open('models/metrics.json', 'w') as f:
+              json.dump(metrics, f, indent=2)
+          "
+
+      - name: Upload model artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: trained-model
+          path: |
+            models/fraud_detector.joblib
+            models/metrics.json
+
+  # ===========================================================================
+  # Model Validation
+  # ===========================================================================
+  validate-model:
+    name: Validate Model
+    runs-on: ubuntu-latest
+    needs: train
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install -e ".[dev]"
+
+      - name: Download model
+        uses: actions/download-artifact@v4
+        with:
+          name: trained-model
+          path: models/
+
+      - name: Validate model
+        run: |
+          python -c "
+          import joblib
+          import json
+          import sys
+          
+          # Load model
+          model = joblib.load('models/fraud_detector.joblib')
+          
+          with open('models/metrics.json') as f:
+              metrics = json.load(f)
+          
+          print('Model Validation')
+          print('=' * 40)
+          
+          # Check metrics thresholds
+          thresholds = {
+              'f1': 0.85,
+              'auc_roc': 0.90,
+              'precision': 0.80,
+              'recall': 0.75,
+          }
+          
+          passed = True
+          for metric, threshold in thresholds.items():
+              value = metrics.get(metric, 0)
+              status = '✅' if value >= threshold else '❌'
+              print(f'{status} {metric}: {value:.4f} (threshold: {threshold})')
+              if value < threshold:
+                  passed = False
+          
+          if not passed:
+              print()
+              print('⚠️ Model does not meet minimum thresholds')
+              sys.exit(1)
+          else:
+              print()
+              print('✅ Model validation passed!')
+          "
+
+  # ===========================================================================
+  # Model Benchmark
+  # ===========================================================================
+  benchmark:
+    name: Benchmark Model
+    runs-on: ubuntu-latest
+    needs: validate-model
+    if: github.event.inputs.action == 'benchmark' || github.event.inputs.action == 'train'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install -e ".[dev]"
+
+      - name: Download model
+        uses: actions/download-artifact@v4
+        with:
+          name: trained-model
+          path: models/
+
+      - name: Run benchmark
+        run: |
+          python -c "
+          import joblib
+          import numpy as np
+          import time
+          import json
+          
+          model = joblib.load('models/fraud_detector.joblib')
+          
+          # Generate test data
+          n_samples = 10000
+          n_features = len(model.feature_names_in_) if hasattr(model, 'feature_names_in_') else 30
+          X_test = np.random.randn(n_samples, n_features)
+          
+          # Benchmark inference latency
+          latencies = []
+          for _ in range(100):
+              start = time.perf_counter()
+              _ = model.predict(X_test[:1])
+              latencies.append((time.perf_counter() - start) * 1000)
+          
+          # Batch inference
+          start = time.perf_counter()
+          _ = model.predict(X_test)
+          batch_time = (time.perf_counter() - start) * 1000
+          
+          results = {
+              'single_inference_mean_ms': np.mean(latencies),
+              'single_inference_p50_ms': np.percentile(latencies, 50),
+              'single_inference_p95_ms': np.percentile(latencies, 95),
+              'single_inference_p99_ms': np.percentile(latencies, 99),
+              'batch_inference_ms': batch_time,
+              'throughput_per_sec': n_samples / (batch_time / 1000),
+          }
+          
+          print('Benchmark Results')
+          print('=' * 40)
+          for k, v in results.items():
+              print(f'{k}: {v:.3f}')
+          
+          with open('models/benchmark.json', 'w') as f:
+              json.dump(results, f, indent=2)
+          "
+
+      - name: Upload benchmark
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: models/benchmark.json
+
+  # ===========================================================================
+  # Generate Model Card
+  # ===========================================================================
+  model-card:
+    name: Generate Model Card
+    runs-on: ubuntu-latest
+    needs: [validate-model, benchmark]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+
+      - name: Generate model card
+        run: |
+          python -c "
+          import json
+          from datetime import datetime
+          from sentinelflow.mlops.model_card import ModelCard
+          
+          # Load metrics
+          with open('artifacts/trained-model/metrics.json') as f:
+              metrics = json.load(f)
+          
+          # Load benchmark
+          try:
+              with open('artifacts/benchmark-results/benchmark.json') as f:
+                  benchmark = json.load(f)
+          except:
+              benchmark = {}
+          
+          # Create model card
+          card = ModelCard(
+              model_name='SentinelFlow Fraud Detector',
+              model_version='${{ github.sha }}'[:8],
+              model_type='XGBoost',
+              description='Production fraud detection model for financial transactions',
+              developers=['SentinelFlow Team'],
+              training_date=datetime.now().isoformat(),
+              last_updated=datetime.now().isoformat(),
+              
+              primary_intended_uses=[
+                  'Real-time fraud detection',
+                  'Risk scoring for transactions',
+                  'Suspicious activity monitoring',
+              ],
+              
+              primary_intended_users=[
+                  'Financial institutions',
+                  'Payment processors',
+                  'Fraud analysts',
+              ],
+              
+              out_of_scope_uses=[
+                  'Credit scoring',
+                  'Marketing profiling',
+                  'Autonomous blocking without review',
+              ],
+              
+              metrics=metrics,
+              
+              ethical_considerations=[
+                  'Human review required for high-stakes decisions',
+                  'Regular bias monitoring recommended',
+                  'KVKK/GDPR compliance required',
+              ],
+              
+              caveats=[
+                  'Performance may degrade with new fraud patterns',
+                  'Requires regular retraining',
+              ],
+              
+              recommendations=[
+                  'Monitor for drift weekly',
+                  'A/B test before major updates',
+                  'Maintain audit logs',
+              ],
+          )
+          
+          card.additional_info['benchmark'] = benchmark
+          card.additional_info['commit'] = '${{ github.sha }}'
+          card.additional_info['run_id'] = '${{ github.run_id }}'
+          
+          # Export
+          card.to_markdown('MODEL_CARD.md')
+          card.to_json('model_card.json')
+          
+          print('Model card generated!')
+          "
+
+      - name: Upload model card
+        uses: actions/upload-artifact@v4
+        with:
+          name: model-card
+          path: |
+            MODEL_CARD.md
+            model_card.json
+
+  # ===========================================================================
+  # Drift Check
+  # ===========================================================================
+  drift-check:
+    name: Drift Check
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+
+      - name: Check for drift
+        run: |
+          python -c "
+          from sentinelflow.mlops.drift_detector import DriftDetector
+          import pandas as pd
+          import numpy as np
+          
+          # Generate reference and current data (simulated)
+          np.random.seed(42)
+          n = 1000
+          
+          reference = pd.DataFrame({
+              'amount': np.random.lognormal(5, 1, n),
+              'velocity': np.random.poisson(3, n),
+              'hour': np.random.randint(0, 24, n),
+          })
+          
+          # Simulate slight drift
+          current = pd.DataFrame({
+              'amount': np.random.lognormal(5.1, 1.1, n),  # Slight shift
+              'velocity': np.random.poisson(3.5, n),
+              'hour': np.random.randint(0, 24, n),
+          })
+          
+          detector = DriftDetector()
+          report = detector.detect_data_drift(reference, current)
+          
+          print('Drift Report')
+          print('=' * 40)
+          print(f'Has Drift: {report.has_drift}')
+          print(f'Severity: {report.severity.value}')
+          print(f'Drifted Features: {report.drifted_features}')
+          
+          if report.has_drift:
+              print()
+              print('⚠️ Data drift detected! Consider retraining.')
+          "
+
+  # ===========================================================================
+  # Register Model
+  # ===========================================================================
+  register-model:
+    name: Register Model
+    runs-on: ubuntu-latest
+    needs: [validate-model, model-card]
+    if: github.ref == 'refs/heads/main' && (github.event.inputs.action == 'train' || github.event.inputs.action == 'deploy')
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+
+      - name: Register model
+        run: |
+          python -c "
+          import joblib
+          import json
+          from sentinelflow.mlops.registry import ModelRegistry
+          
+          registry = ModelRegistry('mlops/registry')
+          
+          model = joblib.load('artifacts/trained-model/fraud_detector.joblib')
+          
+          with open('artifacts/trained-model/metrics.json') as f:
+              metrics = json.load(f)
+          
+          version = registry.register_model(
+              model=model,
+              name='fraud_detector',
+              metrics=metrics,
+              description='Production fraud detection model',
+              tags={
+                  'commit': '${{ github.sha }}'[:8],
+                  'run_id': '${{ github.run_id }}',
+              },
+          )
+          
+          print(f'Registered model: {version.model_name} v{version.version}')
+          print(f'Version ID: {version.version_id}')
+          "

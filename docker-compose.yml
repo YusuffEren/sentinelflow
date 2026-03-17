@@ -1,12 +1,38 @@
 # SentinelFlow - Real-Time Financial Fraud Detection System
 # Docker Compose Configuration - Enterprise Grade
 # -----------------------------------------------------
-# Usage: docker-compose up -d
-# Verify: docker-compose ps
-
-version: '3.9'
+# Usage: docker compose up -d
+# Verify: docker compose ps
+# Logs: docker compose logs -f
 
 services:
+  # =============================================================================
+  # POSTGRESQL - Primary Database for Alerts, Cases, Audit
+  # =============================================================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: sentinelflow-postgres
+    hostname: postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: sentinelflow
+      POSTGRES_PASSWORD: sentinelflow_secret
+      POSTGRES_DB: sentinelflow
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init_postgres.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - sentinelflow-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sentinelflow -d sentinelflow"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
   # =============================================================================
   # ZOOKEEPER - Kafka Coordination Service
   # =============================================================================
@@ -26,10 +52,11 @@ services:
     networks:
       - sentinelflow-network
     healthcheck:
-      test: ["CMD", "echo", "ruok", "|", "nc", "localhost", "2181"]
+      test: ["CMD-SHELL", "echo ruok | nc localhost 2181"]
       interval: 30s
       timeout: 10s
-      retries: 5
+      retries: 10
+      start_period: 30s
     restart: unless-stopped
 
   # =============================================================================
@@ -40,7 +67,8 @@ services:
     container_name: sentinelflow-kafka
     hostname: kafka
     depends_on:
-      - zookeeper
+      zookeeper:
+        condition: service_healthy
     ports:
       - "9092:9092"
       - "29092:29092"
@@ -62,20 +90,21 @@ services:
     networks:
       - sentinelflow-network
     healthcheck:
-      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      test: ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server localhost:9092"]
       interval: 30s
       timeout: 10s
       retries: 5
     restart: unless-stopped
 
   # =============================================================================
-  # KAFKA-UI - Web UI for Kafka Cluster Monitoring (Optional but recommended)
+  # KAFKA-UI - Web UI for Kafka Cluster Monitoring
   # =============================================================================
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
     container_name: sentinelflow-kafka-ui
     depends_on:
-      - kafka
+      kafka:
+        condition: service_healthy
     ports:
       - "8080:8080"
     environment:
@@ -138,19 +167,20 @@ services:
       - sentinelflow-network
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 30s
+      interval: 10s
       timeout: 5s
       retries: 5
     restart: unless-stopped
 
   # =============================================================================
-  # REDIS COMMANDER - Web UI for Redis (Optional but recommended)
+  # REDIS COMMANDER - Web UI for Redis
   # =============================================================================
   redis-commander:
     image: rediscommander/redis-commander:latest
     container_name: sentinelflow-redis-commander
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
     ports:
       - "8081:8081"
     environment:
@@ -158,6 +188,29 @@ services:
     networks:
       - sentinelflow-network
     restart: unless-stopped
+
+  # =============================================================================
+  # PROMETHEUS - Metrics Collection (Optional)
+  # =============================================================================
+  prometheus:
+    image: prom/prometheus:v2.48.0
+    container_name: sentinelflow-prometheus
+    hostname: prometheus
+    ports:
+      - "9090:9090"
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=7d'
+      - '--web.enable-lifecycle'
+    volumes:
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    networks:
+      - sentinelflow-network
+    restart: unless-stopped
+    profiles:
+      - monitoring
 
 # =============================================================================
 # NETWORKS
@@ -171,6 +224,8 @@ networks:
 # VOLUMES - Persistent Data Storage
 # =============================================================================
 volumes:
+  postgres_data:
+    name: sentinelflow-postgres-data
   zookeeper_data:
     name: sentinelflow-zookeeper-data
   zookeeper_logs:
@@ -185,3 +240,5 @@ volumes:
     name: sentinelflow-neo4j-plugins
   redis_data:
     name: sentinelflow-redis-data
+  prometheus_data:
+    name: sentinelflow-prometheus-data

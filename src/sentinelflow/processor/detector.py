@@ -45,7 +45,12 @@ from typing import Any, Callable
 from uuid import uuid4
 
 import numpy as np
-from sklearn.ensemble import IsolationForest
+
+# ML Pipeline imports
+from sentinelflow.ml.feature_engine import TransactionFeatureEngine
+from sentinelflow.ml.models import IsolationForestModel, XGBoostFraudModel, AutoEncoderModel
+from sentinelflow.ml.ensemble import EnsembleVoter
+from sentinelflow.ml.explainer import FraudExplainer
 
 from confluent_kafka import Consumer, Producer, KafkaError, KafkaException
 from loguru import logger
@@ -75,6 +80,7 @@ class FraudType(str, Enum):
     BLACKLIST_KEYWORD = "blacklist_keyword"
     MULE_ACCOUNT = "mule_account"
     AI_DETECTED_ANOMALY = "ai_detected_anomaly"
+    ML_ENSEMBLE = "ml_ensemble"
 
 
 # Blacklisted keywords for NLP check (Turkish + English)
@@ -151,6 +157,7 @@ class DetectorStats:
     impossible_travel: int = 0
     blacklist_hits: int = 0
     ai_anomalies: int = 0
+    ml_ensemble_hits: int = 0
     errors: int = 0
     start_time: datetime = field(default_factory=datetime.utcnow)
     
@@ -222,16 +229,53 @@ class FraudDetectorService:
         self._graph_engine: GraphEngine | None = None
         self._redis_client: RedisGeoClient | None = None
         
-        # ML-based anomaly detection (Upgrade 1: Unsupervised Anomaly Detection)
-        self._amount_buffer: deque[float] = deque(maxlen=1000)  # Sliding window of last 1000 amounts
-        self._isolation_forest: IsolationForest | None = None
-        self._ml_min_samples: int = 100  # Minimum samples before training ML model
-        self._anomaly_amount_threshold: float = 50000.0  # Amount threshold for AI anomaly (TL)
+        # ================================================================
+        # ML Ensemble Pipeline (Upgraded from single IsolationForest)
+        # ================================================================
+        self._feature_engine = TransactionFeatureEngine(history_window_size=500)
+        
+        # Initialize models
+        self._isolation_forest_model = IsolationForestModel(
+            contamination=0.05,
+            n_estimators=200,
+            min_samples_to_train=100,
+            retrain_interval=500,
+        )
+        self._xgboost_model = XGBoostFraudModel(
+            model_path="models/xgboost_fraud.json",
+            n_estimators=300,
+            max_depth=6,
+        )
+        self._autoencoder_model = AutoEncoderModel(
+            input_dim=21,
+            encoding_dim=8,
+            model_path="models/autoencoder.pt",
+        )
+        
+        # Ensemble voter
+        self._ensemble = EnsembleVoter(threshold=0.65)
+        self._ensemble.add_model(self._isolation_forest_model, weight=0.3)
+        self._ensemble.add_model(self._xgboost_model, weight=0.5)
+        self._ensemble.add_model(self._autoencoder_model, weight=0.2)
+        
+        # Explainability
+        self._explainer = FraudExplainer(
+            feature_names=TransactionFeatureEngine.get_feature_names(),
+            top_n=5,
+        )
+        
+        # Legacy compatibility: keep amount buffer for basic check
+        self._amount_buffer: deque[float] = deque(maxlen=1000)
+        self._anomaly_amount_threshold: float = 50000.0
         
         # Console for rich output
         self.console = Console()
         
-        logger.info("FraudDetectorService initialized")
+        # Alert writer for PostgreSQL persistence
+        self._alert_writer = None
+        self._enable_postgres = True
+        
+        logger.info("FraudDetectorService initialized with ML Ensemble Pipeline")
     
     # =========================================================================
     # Connection Management
@@ -287,6 +331,33 @@ class FraudDetectorService:
             logger.error(f"Failed to connect to Redis: {e}")
             logger.warning("Impossible travel detection will be disabled!")
             self._redis_client = None
+    
+    def _init_alert_writer(self) -> None:
+        """Initialize alert writer for PostgreSQL persistence."""
+        if not self._enable_postgres:
+            logger.info("PostgreSQL persistence disabled")
+            return
+        
+        try:
+            from sentinelflow.processor.alert_writer import AlertWriter
+            
+            self._alert_writer = AlertWriter(
+                enable_postgres=True,
+                enable_kafka=False,  # We handle Kafka separately
+                kafka_topic=self.topic_out,
+                kafka_servers=self.kafka_servers,
+            )
+            
+            if self._alert_writer.init_postgres():
+                logger.info("Alert writer initialized with PostgreSQL")
+            else:
+                logger.warning("Alert writer PostgreSQL init failed - continuing without persistence")
+                self._alert_writer = None
+        
+        except Exception as e:
+            logger.error(f"Failed to initialize alert writer: {e}")
+            logger.warning("Alert persistence will be disabled!")
+            self._alert_writer = None
     
     def _close_connections(self) -> None:
         """Close all connections gracefully."""
@@ -506,63 +577,65 @@ class FraudDetectorService:
         
         return None
     
-    def _check_ai_anomaly(self, tx_data: dict) -> FraudAlert | None:
+    def _check_ml_ensemble(self, tx_data: dict) -> FraudAlert | None:
         """
-        ENGINE 4: AI-based Anomaly Detection using Isolation Forest.
+        ENGINE 4: ML Ensemble Fraud Detection.
         
-        This uses unsupervised machine learning to detect unusual transaction
-        amounts that deviate significantly from the historical distribution.
+        Uses multiple ML models (IsolationForest, XGBoost, AutoEncoder) with
+        weighted voting to detect anomalous transactions. Provides SHAP-based
+        explanations for flagged transactions.
         
-        How it works:
-        1. Maintains a sliding window of the last 1000 transaction amounts
-        2. Trains an IsolationForest model on this buffer
-        3. Predicts if the current transaction is an anomaly (-1) or normal (1)
-        4. Flags as fraud if anomaly AND amount > 50,000 TL threshold
+        Pipeline:
+        1. Feature Engineering → 21 features from raw transaction
+        2. Multi-Model Prediction → Ensemble weighted vote
+        3. Explainability → SHAP/heuristic top reasons
         
         Args:
             tx_data: Transaction data dictionary
         
         Returns:
-            FraudAlert if AI detects anomaly, None otherwise
+            FraudAlert if ensemble flags fraud, None otherwise
         """
         try:
-            amount = tx_data.get("amount", 0.0)
+            # Step 1: Extract features
+            features_dict = self._feature_engine.extract(tx_data)
+            features_vector = np.array(
+                [features_dict.get(name, 0.0) for name in TransactionFeatureEngine.get_feature_names()],
+                dtype=np.float64,
+            )
             
-            # Step 1: Add the new transaction amount to the sliding window buffer
+            # Step 2: Feed to IsolationForest for online learning
+            self._isolation_forest_model.add_sample_and_maybe_retrain(features_vector)
+            
+            # Step 3: Ensemble prediction
+            prediction = self._ensemble.predict(features_vector)
+            
+            # Also keep legacy amount buffer for backward compat
+            amount = float(tx_data.get("amount", 0.0))
             self._amount_buffer.append(amount)
             
-            # Step 2: Check if we have enough data to train the model
-            if len(self._amount_buffer) < self._ml_min_samples:
-                logger.debug(f"ML buffer collecting: {len(self._amount_buffer)}/{self._ml_min_samples}")
-                return None
-            
-            # Step 3: Initialize and train IsolationForest on the buffer
-            # Reshape buffer data for sklearn (needs 2D array)
-            buffer_array = np.array(list(self._amount_buffer)).reshape(-1, 1)
-            
-            # Create and fit the model
-            self._isolation_forest = IsolationForest(
-                contamination=0.05,  # Expect ~5% anomalies
-                random_state=42,
-                n_estimators=100,
-                max_samples='auto',
-                n_jobs=-1,  # Use all CPU cores
-            )
-            self._isolation_forest.fit(buffer_array)
-            
-            # Step 4: Predict if current transaction is anomaly
-            current_amount = np.array([[amount]])
-            prediction = self._isolation_forest.predict(current_amount)[0]
-            anomaly_score = self._isolation_forest.decision_function(current_amount)[0]
-            
-            # Step 5: Flag as fraud if anomaly (-1) AND amount exceeds threshold
-            if prediction == -1 and amount > self._anomaly_amount_threshold:
+            if prediction.is_fraud:
+                self.stats.ml_ensemble_hits += 1
                 self.stats.ai_anomalies += 1
                 
+                # Step 4: Generate explanation
+                explanation = self._explainer.explain(
+                    features=features_vector,
+                    feature_values=features_dict,
+                )
+                
+                # Determine severity based on score
+                if prediction.final_score >= 0.85:
+                    severity = "critical"
+                elif prediction.final_score >= 0.75:
+                    severity = "high"
+                else:
+                    severity = "medium"
+                
                 return FraudAlert(
-                    fraud_type=FraudType.AI_DETECTED_ANOMALY,
-                    severity="high",
-                    confidence=min(0.95, abs(anomaly_score)),  # Use anomaly score as confidence
+                    fraud_type=FraudType.ML_ENSEMBLE,
+                    severity=severity,
+                    confidence=min(0.99, prediction.final_score),
                     transaction_id=tx_data.get("transaction_id", ""),
                     sender_iban=tx_data.get("sender_iban", ""),
                     sender_name=tx_data.get("sender_name", ""),
@@ -570,21 +643,20 @@ class FraudDetectorService:
                     receiver_name=tx_data.get("receiver_name", ""),
                     amount=amount,
                     description=(
-                        f"AI-detected anomaly: Amount {amount:,.2f} TL is statistically unusual "
-                        f"(Isolation Forest score: {anomaly_score:.4f})"
+                        f"ML Ensemble detected fraud (score: {prediction.final_score:.2f}): "
+                        f"{explanation.summary()}"
                     ),
                     evidence={
-                        "anomaly_score": float(anomaly_score),
-                        "prediction": int(prediction),
-                        "buffer_size": len(self._amount_buffer),
-                        "buffer_mean": float(np.mean(buffer_array)),
-                        "buffer_std": float(np.std(buffer_array)),
-                        "amount_threshold": self._anomaly_amount_threshold,
+                        **prediction.to_dict(),
+                        "xai_explanation": explanation.to_dict(),
+                        "features": {
+                            k: round(v, 4) for k, v in features_dict.items()
+                        },
                     },
                 )
                 
         except Exception as e:
-            logger.error(f"ML anomaly detection error: {e}")
+            logger.error(f"ML ensemble error: {e}")
             self.stats.errors += 1
         
         return None
@@ -595,11 +667,43 @@ class FraudDetectorService:
     
     def _publish_alert(self, alert: FraudAlert) -> None:
         """
-        Publish a fraud alert to Kafka.
+        Publish a fraud alert to Kafka and persist to PostgreSQL.
         
         Args:
             alert: FraudAlert to publish
         """
+        # Step 1: Persist to PostgreSQL (if enabled)
+        if self._alert_writer:
+            try:
+                from sentinelflow.processor.alert_writer import create_alert_from_detection
+                from sentinelflow.contracts import FraudType, Severity
+                
+                # Convert FraudAlert to AlertCreate
+                alert_create = create_alert_from_detection(
+                    fraud_type=alert.fraud_type.value if hasattr(alert.fraud_type, 'value') else alert.fraud_type,
+                    severity=alert.severity,
+                    confidence=alert.confidence,
+                    tx_data={
+                        "transaction_id": alert.transaction_id,
+                        "sender_iban": alert.sender_iban,
+                        "sender_name": alert.sender_name,
+                        "receiver_iban": alert.receiver_iban,
+                        "receiver_name": alert.receiver_name,
+                        "amount": alert.amount,
+                    },
+                    description=alert.description,
+                )
+                
+                persisted = self._alert_writer.write(alert_create)
+                if persisted:
+                    alert.alert_id = persisted.alert_id  # Use DB-generated ID
+                    logger.debug(f"Alert persisted to PostgreSQL: {alert.alert_id}")
+                
+            except Exception as e:
+                logger.error(f"Failed to persist alert to PostgreSQL: {e}")
+                self.stats.errors += 1
+        
+        # Step 2: Publish to Kafka
         if self._producer is None:
             logger.warning("Kafka producer not available")
             return
@@ -615,10 +719,10 @@ class FraudDetectorService:
             )
             self._producer.poll(0)
             
-            logger.debug(f"Alert published: {alert.alert_id}")
+            logger.debug(f"Alert published to Kafka: {alert.alert_id}")
             
         except KafkaException as e:
-            logger.error(f"Failed to publish alert: {e}")
+            logger.error(f"Failed to publish alert to Kafka: {e}")
             self.stats.errors += 1
     
     def _print_alert(self, alert: FraudAlert) -> None:
@@ -697,11 +801,11 @@ class FraudDetectorService:
             alerts.append(blacklist_alert)
         
         # =====================================================================
-        # ENGINE 4: AI Anomaly Detection (Isolation Forest)
+        # ENGINE 4: ML Ensemble Detection (IsolationForest+XGBoost+AutoEncoder)
         # =====================================================================
-        ai_alert = self._check_ai_anomaly(tx_data)
-        if ai_alert:
-            alerts.append(ai_alert)
+        ml_alert = self._check_ml_ensemble(tx_data)
+        if ml_alert:
+            alerts.append(ml_alert)
         
         # =====================================================================
         # Publish all detected fraud alerts
@@ -724,9 +828,15 @@ class FraudDetectorService:
         table.add_row("   +-- Impossible Travel", f"{self.stats.impossible_travel:,}")
         table.add_row("   +-- Blacklist Hits", f"{self.stats.blacklist_hits:,}")
         table.add_row("   +-- AI Anomalies", f"[magenta]{self.stats.ai_anomalies:,}[/magenta]")
+        table.add_row("   +-- ML Ensemble", f"[bright_magenta]{self.stats.ml_ensemble_hits:,}[/bright_magenta]")
         table.add_row("[x] Errors", f"{self.stats.errors:,}")
         table.add_row("[T] Uptime", f"{self.stats.uptime_seconds:.0f}s")
-        table.add_row("[ML] Buffer Size", f"{len(self._amount_buffer):,}/1000")
+        table.add_row("[ML] Feature Engine", f"{self._feature_engine.accounts_tracked:,} accounts")
+        table.add_row("[ML] Ensemble Models", f"{self._ensemble.num_ready_models}/{self._ensemble.num_models} ready")
+        
+        # PostgreSQL status
+        pg_status = "[green]connected[/green]" if self._alert_writer else "[yellow]disabled[/yellow]"
+        table.add_row("[DB] PostgreSQL", pg_status)
         
         fraud_rate = self.stats.fraud_rate * 100
         rate_color = "green" if fraud_rate < 5 else "yellow" if fraud_rate < 10 else "red"
@@ -769,6 +879,7 @@ class FraudDetectorService:
         self._init_kafka_producer()
         self._init_graph_engine()
         self._init_redis_client()
+        self._init_alert_writer()
         
         logger.info("Fraud Detector Service started!")
         logger.info(f"Consuming from: {self.topic_in}")
