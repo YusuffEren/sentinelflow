@@ -24,6 +24,7 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Any
 import re
+import unicodedata
 
 from loguru import logger
 
@@ -337,8 +338,10 @@ class PEPScreener:
     
     def _normalize_name(self, name: str) -> str:
         """Normalize name for comparison."""
-        # Remove special characters, lowercase
-        normalized = re.sub(r'[^\w\s]', '', name.lower())
+        # Remove accents/diacritics, special characters, lowercase
+        normalized = unicodedata.normalize("NFKD", name)
+        normalized = "".join(ch for ch in normalized if not unicodedata.combining(ch))
+        normalized = re.sub(r'[^\w\s]', '', normalized.lower())
         # Remove extra whitespace
         normalized = ' '.join(normalized.split())
         return normalized
@@ -490,7 +493,9 @@ class SanctionsChecker:
     
     def _normalize_name(self, name: str) -> str:
         """Normalize name for comparison."""
-        normalized = re.sub(r'[^\w\s]', '', name.lower())
+        normalized = unicodedata.normalize("NFKD", name)
+        normalized = "".join(ch for ch in normalized if not unicodedata.combining(ch))
+        normalized = re.sub(r'[^\w\s]', '', normalized.lower())
         normalized = ' '.join(normalized.split())
         return normalized
     

@@ -40,6 +40,11 @@ class EnsemblePrediction:
     model_weights: dict[str, float] = field(default_factory=dict)
     active_models: int = 0
     threshold_used: float = 0.5
+
+    @property
+    def ensemble_score(self) -> float:
+        """Backward-compatible alias for final_score."""
+        return self.final_score
     
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for evidence/serialization."""
@@ -65,7 +70,7 @@ class EnsembleVoter:
     normalized among active models.
     """
     
-    def __init__(self, threshold: float = 0.65) -> None:
+    def __init__(self, models: list[Any] | None = None, threshold: float = 0.65) -> None:
         """
         Initialize ensemble voter.
         
@@ -75,6 +80,8 @@ class EnsembleVoter:
         """
         self._models: list[tuple[Any, float]] = []  # (model, weight)
         self._threshold = threshold
+        for model in models or []:
+            self.add_model(model)
         
         logger.info(f"EnsembleVoter initialized (threshold={threshold})")
     

@@ -21,6 +21,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Any
+import unicodedata
 
 from loguru import logger
 
@@ -97,6 +98,13 @@ DEMO_SANCTIONS_LIST = [
     "Yasaklı Kişi",  # Demo sanctioned person
     "Test Sanctions",
 ]
+
+
+def _normalize_person_name(name: str) -> str:
+    """Normalize person names for accent-insensitive matching."""
+    normalized = unicodedata.normalize("NFKD", name)
+    normalized = "".join(ch for ch in normalized if not unicodedata.combining(ch))
+    return " ".join(normalized.lower().split())
 
 
 # =============================================================================
@@ -495,15 +503,15 @@ class ComplianceEngine:
         """Check if name is in PEP list."""
         if not name:
             return False
-        name_lower = name.lower()
-        return any(pep.lower() in name_lower for pep in DEMO_PEP_LIST)
+        name_lower = _normalize_person_name(name)
+        return any(_normalize_person_name(pep) in name_lower for pep in DEMO_PEP_LIST)
     
     def _is_sanctioned(self, name: str) -> bool:
         """Check if name is in sanctions list."""
         if not name:
             return False
-        name_lower = name.lower()
-        return any(s.lower() in name_lower for s in DEMO_SANCTIONS_LIST)
+        name_lower = _normalize_person_name(name)
+        return any(_normalize_person_name(s) in name_lower for s in DEMO_SANCTIONS_LIST)
     
     def _is_high_risk_country(self, location: str) -> bool:
         """Check if location is in high-risk country."""

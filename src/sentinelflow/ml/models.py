@@ -71,6 +71,10 @@ class BaseFraudModel(ABC):
     def predict_single(self, features: np.ndarray) -> float:
         """Return fraud probability for a single feature vector."""
         ...
+
+    def predict(self, features: np.ndarray) -> float:
+        """Backward-compatible alias for single-vector prediction."""
+        return self.predict_single(features)
     
     @property
     @abstractmethod
