@@ -7,21 +7,20 @@ Authentication endpoints: login, logout, register, token refresh.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Depends, Request
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from loguru import logger
+from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.security import HTTPBearer
 
 from sentinelflow.api.deps import get_db_session
-from sentinelflow.auth.service import AuthService
 from sentinelflow.auth.dependencies import get_current_active_user
+from sentinelflow.auth.service import AuthService
 from sentinelflow.contracts import (
+    LoginRequest,
+    TokenResponse,
     User,
     UserCreate,
     UserPublic,
-    LoginRequest,
-    TokenResponse,
 )
-from sentinelflow.contracts.user import RefreshRequest, PasswordChangeRequest
+from sentinelflow.contracts.user import PasswordChangeRequest, RefreshRequest
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 security = HTTPBearer(auto_error=False)
@@ -40,25 +39,25 @@ async def login(
 ):
     """Authenticate user and return tokens."""
     auth_service = AuthService(session)
-    
+
     try:
         # Get client info
         user_agent = request.headers.get("user-agent")
         ip_address = request.client.host if request.client else None
-        
+
         tokens = auth_service.login(
             username=login_data.username,
             password=login_data.password,
             user_agent=user_agent,
             ip_address=ip_address,
         )
-        
+
         session.commit()
         return tokens
-    
+
     except ValueError as e:
         session.rollback()
-        raise HTTPException(status_code=401, detail=str(e))
+        raise HTTPException(status_code=401, detail=str(e)) from e
 
 
 @router.post(
@@ -75,7 +74,7 @@ async def logout(
     auth_service = AuthService(session)
     auth_service.logout(user.user_id, refresh_token)
     session.commit()
-    
+
     return {"message": "Logged out successfully"}
 
 
@@ -91,11 +90,11 @@ async def register(
 ):
     """Register a new user."""
     auth_service = AuthService(session)
-    
+
     try:
         user = auth_service.register(user_data)
         session.commit()
-        
+
         return UserPublic(
             user_id=user.user_id,
             username=user.username,
@@ -103,10 +102,10 @@ async def register(
             role=user.role,
             team=user.team,
         )
-    
+
     except ValueError as e:
         session.rollback()
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 @router.post(
@@ -122,23 +121,23 @@ async def refresh_tokens(
 ):
     """Refresh access token."""
     auth_service = AuthService(session)
-    
+
     try:
         user_agent = request.headers.get("user-agent")
         ip_address = request.client.host if request.client else None
-        
+
         tokens = auth_service.refresh_tokens(
             refresh_token=refresh_data.refresh_token,
             user_agent=user_agent,
             ip_address=ip_address,
         )
-        
+
         session.commit()
         return tokens
-    
+
     except ValueError as e:
         session.rollback()
-        raise HTTPException(status_code=401, detail=str(e))
+        raise HTTPException(status_code=401, detail=str(e)) from e
 
 
 @router.get(
@@ -166,7 +165,7 @@ async def change_password(
 ):
     """Change user password."""
     auth_service = AuthService(session)
-    
+
     try:
         auth_service.change_password(
             user_id=user.user_id,
@@ -174,9 +173,9 @@ async def change_password(
             new_password=password_data.new_password,
         )
         session.commit()
-        
+
         return {"message": "Password changed successfully"}
-    
+
     except ValueError as e:
         session.rollback()
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e

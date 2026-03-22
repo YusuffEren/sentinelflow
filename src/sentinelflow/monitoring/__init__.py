@@ -18,9 +18,9 @@ Components:
     - AlertManager: Alert rules and notifications
 """
 
+from sentinelflow.monitoring.logging import StructuredLogger
 from sentinelflow.monitoring.metrics import MetricsCollector, metrics
 from sentinelflow.monitoring.tracing import TracingManager
-from sentinelflow.monitoring.logging import StructuredLogger
 
 __all__ = [
     "MetricsCollector",

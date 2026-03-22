@@ -10,10 +10,10 @@ unrealistic travel speeds.
 
 Example:
     client = RedisGeoClient()
-    
+
     # Store a transaction location
     client.update_user_location("TR123...", "İstanbul", 41.0082, 28.9784)
-    
+
     # Check if travel is possible
     last_loc = client.get_last_location("TR123...")
     if last_loc:
@@ -31,29 +31,28 @@ import json
 import os
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Optional
 
 import redis
 from loguru import logger
 
 from sentinelflow.config import get_settings
 
-
 # =============================================================================
 # Data Classes
 # =============================================================================
 
+
 @dataclass
 class UserLocation:
     """Represents a user's last known location."""
-    
+
     iban: str
     city: str
     latitude: float
     longitude: float
     timestamp: datetime
     transaction_id: str | None = None
-    
+
     def to_dict(self) -> dict:
         """Serialize to dictionary for Redis storage."""
         return {
@@ -64,9 +63,9 @@ class UserLocation:
             "timestamp": self.timestamp.isoformat(),
             "transaction_id": self.transaction_id,
         }
-    
+
     @classmethod
-    def from_dict(cls, data: dict) -> "UserLocation":
+    def from_dict(cls, data: dict) -> UserLocation:
         """Deserialize from dictionary."""
         return cls(
             iban=data["iban"],
@@ -82,6 +81,7 @@ class UserLocation:
 # Geo Utilities
 # =============================================================================
 
+
 def haversine_distance(
     lat1: float,
     lon1: float,
@@ -90,31 +90,31 @@ def haversine_distance(
 ) -> float:
     """
     Calculate the great-circle distance between two points on Earth.
-    
+
     Uses the Haversine formula to compute distance in kilometers.
-    
+
     Args:
         lat1, lon1: First point coordinates (degrees)
         lat2, lon2: Second point coordinates (degrees)
-    
+
     Returns:
         Distance in kilometers
     """
-    from math import radians, sin, cos, sqrt, atan2
-    
+    from math import atan2, cos, radians, sin, sqrt
+
     # Earth's radius in kilometers
     R = 6371.0
-    
+
     # Convert to radians
     lat1_rad = radians(lat1)
     lat2_rad = radians(lat2)
     delta_lat = radians(lat2 - lat1)
     delta_lon = radians(lon2 - lon1)
-    
+
     # Haversine formula
     a = sin(delta_lat / 2) ** 2 + cos(lat1_rad) * cos(lat2_rad) * sin(delta_lon / 2) ** 2
     c = 2 * atan2(sqrt(a), sqrt(1 - a))
-    
+
     return R * c
 
 
@@ -154,10 +154,10 @@ CITY_COORDINATES: dict[str, tuple[float, float]] = {
 def get_city_coordinates(city_name: str) -> tuple[float, float] | None:
     """
     Get coordinates for a city name.
-    
+
     Args:
         city_name: Name of the city
-    
+
     Returns:
         (latitude, longitude) tuple or None if unknown
     """
@@ -168,20 +168,21 @@ def get_city_coordinates(city_name: str) -> tuple[float, float] | None:
 # Redis Geo Client
 # =============================================================================
 
+
 class RedisGeoClient:
     """
     Redis client for tracking user locations.
-    
+
     Stores the last known location of each user (by IBAN) for
     impossible travel detection.
-    
+
     Data is stored with a TTL so old entries automatically expire.
     """
-    
+
     # Redis key prefixes
     LOCATION_PREFIX = "sentinelflow:location:"
     GEO_KEY = "sentinelflow:geo:users"
-    
+
     def __init__(
         self,
         host: str | None = None,
@@ -192,7 +193,7 @@ class RedisGeoClient:
     ) -> None:
         """
         Initialize Redis connection.
-        
+
         Args:
             host: Redis host (default: from config)
             port: Redis port (default: from config)
@@ -201,18 +202,18 @@ class RedisGeoClient:
             ttl_hours: TTL for location entries in hours
         """
         settings = get_settings()
-        
+
         self._host = host or os.getenv("REDIS_HOST") or settings.redis.host
         self._port = port or int(os.getenv("REDIS_PORT", "0")) or settings.redis.port
         self._db = db
         self._password = password or os.getenv("REDIS_PASSWORD") or settings.redis.password
         self._ttl_seconds = ttl_hours * 3600
-        
+
         self._client: redis.Redis | None = None
         self._connect()
-        
+
         logger.info(f"RedisGeoClient initialized: {self._host}:{self._port}")
-    
+
     def _connect(self) -> None:
         """Establish Redis connection."""
         try:
@@ -232,7 +233,7 @@ class RedisGeoClient:
             logger.error(f"Failed to connect to Redis: {e}")
             self._client = None
             raise
-    
+
     @property
     def is_connected(self) -> bool:
         """Check if Redis is available."""
@@ -243,14 +244,14 @@ class RedisGeoClient:
             return True
         except redis.ConnectionError:
             return False
-    
+
     def close(self) -> None:
         """Close Redis connection."""
         if self._client:
             self._client.close()
             self._client = None
             logger.debug("Redis connection closed")
-    
+
     def update_user_location(
         self,
         iban: str,
@@ -262,7 +263,7 @@ class RedisGeoClient:
     ) -> None:
         """
         Update a user's last known location.
-        
+
         Args:
             iban: User's IBAN (unique identifier)
             city: City name
@@ -274,10 +275,10 @@ class RedisGeoClient:
         if self._client is None:
             logger.warning("Redis not connected, skipping location update")
             return
-        
+
         if timestamp is None:
             timestamp = datetime.utcnow()
-        
+
         location = UserLocation(
             iban=iban,
             city=city,
@@ -286,9 +287,9 @@ class RedisGeoClient:
             timestamp=timestamp,
             transaction_id=transaction_id,
         )
-        
+
         key = f"{self.LOCATION_PREFIX}{iban}"
-        
+
         try:
             # Store as JSON with TTL
             self._client.setex(
@@ -296,34 +297,34 @@ class RedisGeoClient:
                 self._ttl_seconds,
                 json.dumps(location.to_dict()),
             )
-            
+
             # Also store in Redis GEO set for proximity queries
             self._client.geoadd(
                 self.GEO_KEY,
                 (longitude, latitude, iban),
             )
-            
+
             logger.debug(f"Location updated: {iban[:12]}... -> {city}")
-            
+
         except redis.RedisError as e:
             logger.error(f"Failed to update location: {e}")
-    
+
     def get_last_location(self, iban: str) -> UserLocation | None:
         """
         Get a user's last known location.
-        
+
         Args:
             iban: User's IBAN
-        
+
         Returns:
             UserLocation or None if not found
         """
         if self._client is None:
             logger.warning("Redis not connected")
             return None
-        
+
         key = f"{self.LOCATION_PREFIX}{iban}"
-        
+
         try:
             data = self._client.get(key)
             if data:
@@ -332,7 +333,7 @@ class RedisGeoClient:
         except redis.RedisError as e:
             logger.error(f"Failed to get location: {e}")
             return None
-    
+
     def check_impossible_travel(
         self,
         iban: str,
@@ -344,7 +345,7 @@ class RedisGeoClient:
     ) -> tuple[bool, dict | None]:
         """
         Check if travel from last location is physically possible.
-        
+
         Args:
             iban: User's IBAN
             new_city: New transaction city
@@ -352,18 +353,18 @@ class RedisGeoClient:
             new_longitude: New longitude
             new_timestamp: New transaction timestamp
             max_speed_kmh: Maximum realistic speed (default: 900 km/h = fast jet)
-        
+
         Returns:
             (is_impossible, details_dict)
             - is_impossible: True if travel is impossible
             - details: Dict with distance, time, speed info (or None)
         """
         last_location = self.get_last_location(iban)
-        
+
         if last_location is None:
             # First transaction for this user, no prior location
             return False, None
-        
+
         # Calculate distance
         distance_km = haversine_distance(
             last_location.latitude,
@@ -371,18 +372,18 @@ class RedisGeoClient:
             new_latitude,
             new_longitude,
         )
-        
+
         # Calculate time difference
         time_diff = new_timestamp - last_location.timestamp
         hours_elapsed = time_diff.total_seconds() / 3600
-        
+
         # Avoid division by zero
         if hours_elapsed <= 0:
             hours_elapsed = 0.001  # Assume ~3.6 seconds minimum
-        
+
         # Calculate required speed
         required_speed_kmh = distance_km / hours_elapsed
-        
+
         details = {
             "from_city": last_location.city,
             "to_city": new_city,
@@ -395,19 +396,19 @@ class RedisGeoClient:
             "max_allowed_speed_kmh": max_speed_kmh,
             "last_transaction_id": last_location.transaction_id,
         }
-        
+
         # Check if speed exceeds maximum
         is_impossible = required_speed_kmh > max_speed_kmh
-        
+
         if is_impossible:
             logger.warning(
                 f"🚨 IMPOSSIBLE TRAVEL: {last_location.city} → {new_city} "
                 f"({distance_km:.0f} km in {hours_elapsed * 60:.1f} min = "
                 f"{required_speed_kmh:.0f} km/h)"
             )
-        
+
         return is_impossible, details
-    
+
     def clear_all(self) -> None:
         """Clear all location data. USE WITH CAUTION!"""
         if self._client:
@@ -423,8 +424,8 @@ class RedisGeoClient:
                     self._client.delete(*keys)
                 if cursor == 0:
                     break
-            
+
             # Delete geo set
             self._client.delete(self.GEO_KEY)
-            
+
             logger.warning("All location data cleared!")

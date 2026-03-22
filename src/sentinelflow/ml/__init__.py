@@ -37,10 +37,11 @@ Utilities:
 
 from loguru import logger
 
-# Base components - always available
-from sentinelflow.ml.feature_engine import TransactionFeatureEngine, FEATURE_NAMES, NUM_FEATURES
-from sentinelflow.ml.ensemble import EnsembleVoter
 from sentinelflow.ml.dataset_loader import FraudDatasetLoader
+from sentinelflow.ml.ensemble import EnsembleVoter
+
+# Base components - always available
+from sentinelflow.ml.feature_engine import FEATURE_NAMES, NUM_FEATURES, TransactionFeatureEngine
 
 # Models that don't require torch
 from sentinelflow.ml.models import IsolationForestModel, XGBoostFraudModel
@@ -48,6 +49,7 @@ from sentinelflow.ml.models import IsolationForestModel, XGBoostFraudModel
 # Optional torch-dependent components
 try:
     from sentinelflow.ml.models import AutoEncoderModel
+
     HAS_AUTOENCODER = True
 except (ImportError, OSError) as e:
     logger.warning(f"AutoEncoder not available (torch issue): {e}")
@@ -82,11 +84,11 @@ except ImportError:
 # Advanced components for TEKNOFEST
 try:
     from sentinelflow.ml.advanced_models import (
-        LightGBMFraudModel,
         CatBoostFraudModel,
-        StackingEnsemble,
         DataBalancer,
         FocalLoss,
+        LightGBMFraudModel,
+        StackingEnsemble,
         create_competition_ensemble,
     )
 except ImportError:
@@ -99,9 +101,9 @@ except ImportError:
 
 try:
     from sentinelflow.ml.advanced_features import (
+        ADVANCED_FEATURE_NAMES,
         AdvancedFeatureEngine,
         CombinedFeatureEngine,
-        ADVANCED_FEATURE_NAMES,
     )
 except ImportError:
     AdvancedFeatureEngine = None
@@ -110,9 +112,9 @@ except ImportError:
 
 try:
     from sentinelflow.ml.graph_features import (
+        GRAPH_FEATURE_NAMES,
         GraphFeatureEngine,
         InMemoryGraphFeatureEngine,
-        GRAPH_FEATURE_NAMES,
     )
 except ImportError:
     GraphFeatureEngine = None
@@ -127,29 +129,24 @@ __all__ = [
     "AdvancedFeatureEngine",
     "CombinedFeatureEngine",
     "ADVANCED_FEATURE_NAMES",
-    
     # Graph features
     "GraphFeatureEngine",
     "InMemoryGraphFeatureEngine",
     "GRAPH_FEATURE_NAMES",
-    
     # Base models
     "IsolationForestModel",
     "XGBoostFraudModel",
     "AutoEncoderModel",
     "HAS_AUTOENCODER",
-    
     # Advanced models (TEKNOFEST)
     "LightGBMFraudModel",
     "CatBoostFraudModel",
     "GNNFraudModel",
     "TemporalFraudModel",
-    
     # Ensemble methods
     "EnsembleVoter",
     "StackingEnsemble",
     "create_competition_ensemble",
-    
     # Utilities
     "FraudExplainer",
     "DataBalancer",

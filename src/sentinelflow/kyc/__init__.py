@@ -19,16 +19,16 @@ Components:
 
 Usage:
     from sentinelflow.kyc import CustomerRiskScorer, CDDEngine
-    
+
     scorer = CustomerRiskScorer()
     risk_result = scorer.assess_customer(customer_data)
-    
+
     cdd = CDDEngine()
     cdd_result = cdd.perform_cdd(customer_data)
 """
 
-from sentinelflow.kyc.risk_scorer import CustomerRiskScorer, RiskAssessment
 from sentinelflow.kyc.cdd import CDDEngine, CDDResult, DDLevel
+from sentinelflow.kyc.risk_scorer import CustomerRiskScorer, RiskAssessment
 from sentinelflow.kyc.screening import PEPScreener, SanctionsChecker, ScreeningResult
 
 __all__ = [

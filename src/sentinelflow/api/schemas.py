@@ -18,29 +18,27 @@ from pydantic import BaseModel, Field
 # =============================================================================
 # Re-export from contracts (single source of truth)
 # =============================================================================
-
 from sentinelflow.contracts import (
     # Version
     SCHEMA_VERSION,
-    # Enums
-    FraudType,
-    Severity,
-    CaseStatus,
-    CasePriority,
-    EventType,
-    # Transaction
-    TransactionCreate,
-    TransactionSummary,
     # Alert
     Alert,
     AlertCreate,
-    Evidence,
     # Case
     Case,
     CaseCreate,
     CaseEvent,
+    CasePriority,
+    CaseStatus,
+    EventType,
+    Evidence,
+    # Enums
+    FraudType,
+    Severity,
+    # Transaction
+    TransactionCreate,
+    TransactionSummary,
 )
-
 from sentinelflow.contracts.alert import AlertListResponse
 from sentinelflow.contracts.case import CaseListResponse, CaseSummary, CaseUpdate
 
@@ -55,9 +53,10 @@ AlertResponse = Alert
 # API-specific Response Schemas
 # =============================================================================
 
+
 class TransactionResponse(BaseModel):
     """Response after submitting a transaction."""
-    
+
     transaction_id: str
     status: str = Field(default="analyzed", description="Processing status")
     message: str = Field(default="Transaction analyzed successfully")
@@ -69,7 +68,7 @@ class TransactionResponse(BaseModel):
 
 class BatchTransactionResponse(BaseModel):
     """Response for batch transaction submission."""
-    
+
     total_processed: int
     fraud_detected: int
     results: list[TransactionResponse]
@@ -80,9 +79,10 @@ class BatchTransactionResponse(BaseModel):
 # ML Pipeline Schemas
 # =============================================================================
 
+
 class MLFeatureResponse(BaseModel):
     """Response with extracted features."""
-    
+
     transaction_id: str
     features: dict[str, float] = Field(..., description="Extracted feature values")
     num_features: int = Field(default=21)
@@ -90,7 +90,7 @@ class MLFeatureResponse(BaseModel):
 
 class MLPredictionResponse(BaseModel):
     """Response with ML prediction."""
-    
+
     transaction_id: str
     is_fraud: bool
     ensemble_score: float = Field(..., ge=0.0, le=1.0)
@@ -100,7 +100,7 @@ class MLPredictionResponse(BaseModel):
 
 class ModelInfo(BaseModel):
     """Information about a single ML model."""
-    
+
     name: str
     version: str = "1.0.0"
     ready: bool = False
@@ -110,7 +110,7 @@ class ModelInfo(BaseModel):
 
 class ModelStatusResponse(BaseModel):
     """Status of all ML models."""
-    
+
     isolation_forest: ModelInfo = Field(default_factory=lambda: ModelInfo(name="IsolationForest"))
     xgboost: ModelInfo = Field(default_factory=lambda: ModelInfo(name="XGBoost"))
     autoencoder: ModelInfo = Field(default_factory=lambda: ModelInfo(name="AutoEncoder"))
@@ -120,14 +120,16 @@ class ModelStatusResponse(BaseModel):
 
 class TrainRequest(BaseModel):
     """Request to trigger model training."""
-    
-    n_samples: int = Field(default=5000, ge=100, le=100000, description="Number of synthetic samples")
+
+    n_samples: int = Field(
+        default=5000, ge=100, le=100000, description="Number of synthetic samples"
+    )
     fraud_ratio: float = Field(default=0.05, ge=0.01, le=0.5, description="Fraud ratio")
-    
+
 
 class TrainResponse(BaseModel):
     """Response with training results."""
-    
+
     status: str = "completed"
     training_time_seconds: float = 0.0
     dataset_size: int = 0
@@ -138,9 +140,10 @@ class TrainResponse(BaseModel):
 # System Schemas
 # =============================================================================
 
+
 class ComponentStatus(BaseModel):
     """Status of a system component."""
-    
+
     name: str
     status: str = "unknown"  # healthy, degraded, down, unknown
     latency_ms: float | None = None
@@ -149,7 +152,7 @@ class ComponentStatus(BaseModel):
 
 class HealthResponse(BaseModel):
     """System health check response."""
-    
+
     status: str = Field(default="healthy", description="Overall system status")
     version: str = Field(default="2.0.0")
     schema_version: str = Field(default=SCHEMA_VERSION)
@@ -159,28 +162,28 @@ class HealthResponse(BaseModel):
 
 class StatsResponse(BaseModel):
     """System statistics response."""
-    
+
     transactions_processed: int = 0
     fraud_detected: int = 0
     alerts_created: int = 0
     cases_open: int = 0
     cases_resolved: int = 0
-    
+
     # By fraud type
     by_fraud_type: dict[str, int] = Field(default_factory=dict)
-    
+
     # By severity
     by_severity: dict[str, int] = Field(default_factory=dict)
-    
+
     # Performance
     avg_detection_latency_ms: float = 0.0
     p95_detection_latency_ms: float = 0.0
-    
+
     # Time range
     period_start: datetime | None = None
     period_end: datetime | None = None
     uptime_seconds: float = 0.0
-    
+
     # Rates
     fraud_rate: float = Field(default=0.0, description="Fraud detection rate (percentage)")
     alerts_per_minute: float = 0.0
@@ -190,9 +193,10 @@ class StatsResponse(BaseModel):
 # WebSocket Message Schemas
 # =============================================================================
 
+
 class WSMessage(BaseModel):
     """WebSocket message format."""
-    
+
     type: str = Field(..., description="Message type: alert, stats, heartbeat, error")
     data: dict[str, Any] = Field(default_factory=dict)
     timestamp: datetime = Field(default_factory=lambda: datetime.now())
@@ -200,14 +204,14 @@ class WSMessage(BaseModel):
 
 class WSAlertMessage(BaseModel):
     """WebSocket alert notification."""
-    
+
     type: str = "alert"
     alert: Alert
-    
+
 
 class WSStatsMessage(BaseModel):
     """WebSocket stats update."""
-    
+
     type: str = "stats"
     stats: StatsResponse
 

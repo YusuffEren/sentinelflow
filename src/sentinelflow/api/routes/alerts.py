@@ -8,18 +8,14 @@ Alert endpoints - read alerts from PostgreSQL.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any
 
-from fastapi import APIRouter, HTTPException, Query, Depends
-from loguru import logger
+from fastapi import APIRouter, Depends, HTTPException, Query
 
+from sentinelflow.api.deps import get_db_session
 from sentinelflow.api.schemas import (
     Alert,
     AlertListResponse,
-    FraudType,
-    Severity,
 )
-from sentinelflow.api.deps import get_db_session
 
 router = APIRouter(prefix="/alerts", tags=["Alerts"])
 
@@ -44,9 +40,9 @@ async def list_alerts(
 ):
     """List alerts with pagination and filtering."""
     from sentinelflow.repository import AlertRepository
-    
+
     repo = AlertRepository(session)
-    
+
     alerts, total = repo.list(
         page=page,
         page_size=page_size,
@@ -58,7 +54,7 @@ async def list_alerts(
         sender_iban=sender_iban,
         receiver_iban=receiver_iban,
     )
-    
+
     return AlertListResponse(
         total=total,
         page=page,
@@ -84,10 +80,10 @@ async def get_alert_stats(
 ):
     """Get alert statistics."""
     from sentinelflow.repository import AlertRepository
-    
+
     repo = AlertRepository(session)
     stats = repo.get_stats(start_date=start_date, end_date=end_date)
-    
+
     return stats
 
 
@@ -103,13 +99,13 @@ async def get_alert(
 ):
     """Get a specific alert by ID."""
     from sentinelflow.repository import AlertRepository
-    
+
     repo = AlertRepository(session)
     alert = repo.get_by_id(alert_id)
-    
+
     if not alert:
         raise HTTPException(status_code=404, detail=f"Alert {alert_id} not found")
-    
+
     return alert
 
 
@@ -126,17 +122,17 @@ async def dismiss_alert(
 ):
     """Dismiss an alert."""
     from sentinelflow.repository import AlertRepository
-    
+
     repo = AlertRepository(session)
-    
+
     # TODO: Get actual user from JWT
     alert = repo.dismiss(alert_id, dismissed_by="system", reason=reason)
-    
+
     if not alert:
         raise HTTPException(status_code=404, detail=f"Alert {alert_id} not found")
-    
+
     session.commit()
-    
+
     return alert
 
 
@@ -152,19 +148,18 @@ async def link_alert_to_case(
 ):
     """Link an alert to a case."""
     from sentinelflow.repository import AlertRepository, EventRepository
-    from sentinelflow.contracts import EventType
-    
+
     alert_repo = AlertRepository(session)
     event_repo = EventRepository(session)
-    
+
     success = alert_repo.link_to_case(alert_id, case_id)
-    
+
     if not success:
         raise HTTPException(status_code=404, detail=f"Alert {alert_id} not found")
-    
+
     # Log event
     event_repo.log_alert_linked(case_id, alert_id)
-    
+
     session.commit()
-    
+
     return {"status": "linked", "alert_id": alert_id, "case_id": case_id}
