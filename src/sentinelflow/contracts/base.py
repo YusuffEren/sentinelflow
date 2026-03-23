@@ -19,7 +19,7 @@ SCHEMA_VERSION = "1.0.0"
 
 class ContractBase(BaseModel):
     """Base class for all contract schemas."""
-    
+
     model_config = ConfigDict(
         from_attributes=True,  # Enable ORM mode for SQLAlchemy
         populate_by_name=True,
@@ -32,7 +32,7 @@ class ContractBase(BaseModel):
 
 class KafkaMessageBase(ContractBase):
     """Base class for Kafka messages with versioning."""
-    
+
     schema_version: str = Field(
         default=SCHEMA_VERSION,
         description="Schema version for compatibility checking",
@@ -41,7 +41,7 @@ class KafkaMessageBase(ContractBase):
         default_factory=lambda: datetime.now(timezone.utc),
         description="Timestamp when message was produced",
     )
-    
+
     def to_kafka_dict(self) -> dict[str, Any]:
         """Serialize for Kafka with proper datetime handling."""
         data = self.model_dump(mode="json")
@@ -56,4 +56,5 @@ def utc_now() -> datetime:
 def generate_id(prefix: str) -> str:
     """Generate a unique ID with prefix."""
     from uuid import uuid4
+
     return f"{prefix}-{uuid4().hex[:12].upper()}"

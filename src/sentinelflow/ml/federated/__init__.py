@@ -15,7 +15,7 @@ Components:
 
 Usage:
     from sentinelflow.ml.federated import FederatedSimulator
-    
+
     sim = FederatedSimulator(num_clients=5)
     sim.run_simulation(rounds=10)
 """

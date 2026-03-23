@@ -14,7 +14,7 @@ from sentinelflow.processor.detector import FraudDetectorService, FraudAlert, De
 __all__ = [
     # Graph Engine
     "GraphEngine",
-    "FraudRing", 
+    "FraudRing",
     "TransactionData",
     # Redis Geo
     "RedisGeoClient",

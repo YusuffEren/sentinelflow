@@ -19,10 +19,10 @@ Components:
 
 Usage:
     from sentinelflow.kyc import CustomerRiskScorer, CDDEngine
-    
+
     scorer = CustomerRiskScorer()
     risk_result = scorer.assess_customer(customer_data)
-    
+
     cdd = CDDEngine()
     cdd_result = cdd.perform_cdd(customer_data)
 """

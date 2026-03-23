@@ -18,7 +18,7 @@ from sentinelflow.database.postgres import get_session
 def get_db_session() -> Generator[Session, None, None]:
     """
     Dependency that provides a database session.
-    
+
     Yields a session and ensures it's closed after the request.
     """
     session = get_session()
@@ -46,7 +46,7 @@ def get_db_session() -> Generator[Session, None, None]:
 #             raise credentials_exception
 #     except JWTError:
 #         raise credentials_exception
-#     
+#
 #     user = get_user(username)
 #     if user is None:
 #         raise credentials_exception

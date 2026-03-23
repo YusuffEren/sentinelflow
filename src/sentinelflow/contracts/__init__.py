@@ -6,7 +6,7 @@ Central schema definitions used across all SentinelFlow services.
 
 This module defines the canonical data contracts for:
 - Transactions
-- Alerts  
+- Alerts
 - Cases
 - Events (audit log)
 
@@ -58,7 +58,7 @@ __all__ = [
     "SCHEMA_VERSION",
     # Enums
     "FraudType",
-    "Severity", 
+    "Severity",
     "CaseStatus",
     "CasePriority",
     "EventType",

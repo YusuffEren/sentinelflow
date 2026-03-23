@@ -46,9 +46,9 @@ async def get_model_status():
     """Get status of ML models."""
     try:
         from sentinelflow.ml.models import IsolationForestModel, XGBoostFraudModel, AutoEncoderModel
-        
+
         models_dir = os.path.join(os.getcwd(), "models")
-        
+
         # Check IsolationForest
         if_path = os.path.join(models_dir, "isolation_forest.pkl")
         if_ready = os.path.exists(if_path)
@@ -56,9 +56,13 @@ async def get_model_status():
             name="IsolationForest",
             version="1.0.0",
             ready=if_ready,
-            last_trained=datetime.fromtimestamp(os.path.getmtime(if_path), tz=timezone.utc) if if_ready else None,
+            last_trained=(
+                datetime.fromtimestamp(os.path.getmtime(if_path), tz=timezone.utc)
+                if if_ready
+                else None
+            ),
         )
-        
+
         # Check XGBoost
         xgb_path = os.path.join(models_dir, "xgboost_fraud.json")
         xgb_ready = os.path.exists(xgb_path)
@@ -66,9 +70,13 @@ async def get_model_status():
             name="XGBoost",
             version="1.0.0",
             ready=xgb_ready,
-            last_trained=datetime.fromtimestamp(os.path.getmtime(xgb_path), tz=timezone.utc) if xgb_ready else None,
+            last_trained=(
+                datetime.fromtimestamp(os.path.getmtime(xgb_path), tz=timezone.utc)
+                if xgb_ready
+                else None
+            ),
         )
-        
+
         # Check AutoEncoder
         ae_path = os.path.join(models_dir, "autoencoder.pt")
         ae_ready = os.path.exists(ae_path)
@@ -76,11 +84,15 @@ async def get_model_status():
             name="AutoEncoder",
             version="1.0.0",
             ready=ae_ready,
-            last_trained=datetime.fromtimestamp(os.path.getmtime(ae_path), tz=timezone.utc) if ae_ready else None,
+            last_trained=(
+                datetime.fromtimestamp(os.path.getmtime(ae_path), tz=timezone.utc)
+                if ae_ready
+                else None
+            ),
         )
-        
+
         ensemble_ready = if_ready and xgb_ready
-        
+
         return ModelStatusResponse(
             isolation_forest=if_info,
             xgboost=xgb_info,
@@ -88,7 +100,7 @@ async def get_model_status():
             ensemble_ready=ensemble_ready,
             ensemble_threshold=0.7,
         )
-    
+
     except Exception as e:
         logger.error(f"Error getting model status: {e}")
         return ModelStatusResponse()
@@ -107,25 +119,25 @@ async def train_models(
 ):
     """Train ML models."""
     global _training_status
-    
+
     if _training_status["is_training"]:
         raise HTTPException(
             status_code=409,
             detail="Training already in progress",
         )
-    
+
     _training_status["is_training"] = True
     _training_status["started_at"] = datetime.now(timezone.utc)
     _training_status["progress"] = 0
     _training_status["message"] = "Starting training..."
-    
+
     # Run training in background
     background_tasks.add_task(
         _run_training,
         n_samples=request.n_samples,
         fraud_ratio=request.fraud_ratio,
     )
-    
+
     return TrainResponse(
         status="started",
         training_time_seconds=0,
@@ -141,7 +153,7 @@ async def train_models(
 async def get_training_status():
     """Get current training status."""
     global _training_status
-    
+
     return {
         "is_training": _training_status["is_training"],
         "started_at": _training_status["started_at"],
@@ -153,48 +165,48 @@ async def get_training_status():
 async def _run_training(n_samples: int, fraud_ratio: float):
     """Background training task."""
     global _training_status
-    
+
     start_time = time.time()
-    
+
     try:
         from sentinelflow.ml.dataset_loader import FraudDatasetLoader
         from sentinelflow.ml.train_pipeline import TrainPipeline
-        
+
         _training_status["message"] = "Generating synthetic dataset..."
         _training_status["progress"] = 10
-        
+
         # Generate dataset
         loader = FraudDatasetLoader()
         X, y = loader.generate_synthetic_dataset(
             n_samples=n_samples,
             fraud_ratio=fraud_ratio,
         )
-        
+
         _training_status["message"] = "Training models..."
         _training_status["progress"] = 30
-        
+
         # Train pipeline
         pipeline = TrainPipeline(models_dir="models")
-        
+
         _training_status["progress"] = 50
         metrics = pipeline.train_all(X, y)
-        
+
         _training_status["progress"] = 90
         _training_status["message"] = "Saving models..."
-        
+
         pipeline.save_all()
-        
+
         elapsed = time.time() - start_time
-        
+
         _training_status["progress"] = 100
         _training_status["message"] = f"Training completed in {elapsed:.1f}s"
-        
+
         logger.info(f"Training completed: {n_samples} samples, {elapsed:.1f}s")
-    
+
     except Exception as e:
         logger.error(f"Training failed: {e}")
         _training_status["message"] = f"Training failed: {str(e)}"
-    
+
     finally:
         _training_status["is_training"] = False
 
@@ -208,19 +220,21 @@ async def get_features():
     """Get ML feature definitions."""
     try:
         from sentinelflow.ml.feature_engine import FEATURE_NAMES, FEATURE_DESCRIPTIONS
-        
+
         features = []
         for name in FEATURE_NAMES:
-            features.append({
-                "name": name,
-                "description": FEATURE_DESCRIPTIONS.get(name, ""),
-            })
-        
+            features.append(
+                {
+                    "name": name,
+                    "description": FEATURE_DESCRIPTIONS.get(name, ""),
+                }
+            )
+
         return {
             "total_features": len(FEATURE_NAMES),
             "features": features,
         }
-    
+
     except Exception as e:
         logger.error(f"Error getting features: {e}")
         return {"total_features": 0, "features": []}

@@ -17,6 +17,6 @@ from sentinelflow.repository.event_repository import EventRepository
 
 __all__ = [
     "AlertRepository",
-    "CaseRepository", 
+    "CaseRepository",
     "EventRepository",
 ]

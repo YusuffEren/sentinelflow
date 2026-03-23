@@ -17,10 +17,10 @@ Components:
 
 Usage:
     from sentinelflow.compliance import MASAKReporter, ComplianceEngine
-    
+
     engine = ComplianceEngine()
     engine.check_transaction(tx_data)
-    
+
     reporter = MASAKReporter()
     reporter.generate_str(fraud_alert)
 """

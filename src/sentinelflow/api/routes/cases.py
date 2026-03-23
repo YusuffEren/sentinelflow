@@ -41,9 +41,9 @@ async def list_cases(
 ):
     """List cases with pagination and filtering."""
     from sentinelflow.repository import CaseRepository
-    
+
     repo = CaseRepository(session)
-    
+
     cases, total = repo.list(
         page=page,
         page_size=page_size,
@@ -52,7 +52,7 @@ async def list_cases(
         assigned_to=assigned_to,
         is_open=is_open,
     )
-    
+
     return CaseListResponse(
         total=total,
         page=page,
@@ -71,7 +71,7 @@ async def get_case_stats(
 ):
     """Get case statistics."""
     from sentinelflow.repository import CaseRepository
-    
+
     repo = CaseRepository(session)
     return repo.get_stats()
 
@@ -89,17 +89,17 @@ async def create_case(
     """Create a new case."""
     from sentinelflow.repository import CaseRepository, EventRepository
     from sentinelflow.contracts import EventType
-    
+
     case_repo = CaseRepository(session)
     event_repo = EventRepository(session)
-    
+
     case = case_repo.create(case_data)
-    
+
     # Log creation event
     event_repo.log_case_created(case.case_id)
-    
+
     session.commit()
-    
+
     return case
 
 
@@ -114,13 +114,13 @@ async def get_case(
 ):
     """Get a specific case by ID."""
     from sentinelflow.repository import CaseRepository
-    
+
     repo = CaseRepository(session)
     case = repo.get_by_id(case_id)
-    
+
     if not case:
         raise HTTPException(status_code=404, detail=f"Case {case_id} not found")
-    
+
     return case
 
 
@@ -136,15 +136,15 @@ async def update_case(
 ):
     """Update case fields."""
     from sentinelflow.repository import CaseRepository, EventRepository
-    
+
     case_repo = CaseRepository(session)
     event_repo = EventRepository(session)
-    
+
     # Get current case
     current = case_repo.get_by_id(case_id)
     if not current:
         raise HTTPException(status_code=404, detail=f"Case {case_id} not found")
-    
+
     # Update status if changed
     if update_data.status and update_data.status != current.status:
         old_status = current.status
@@ -154,19 +154,19 @@ async def update_case(
             resolution=update_data.resolution,
         )
         event_repo.log_status_change(case_id, old_status, update_data.status.value)
-    
+
     # Update assignment if changed
     if update_data.assigned_to is not None:
         old_assignee = current.assigned_to
         case = case_repo.assign(case_id, update_data.assigned_to, update_data.assigned_team)
         event_repo.log_assignment(case_id, old_assignee, update_data.assigned_to)
-    
+
     # Add note if provided
     if update_data.note:
         event_repo.log_note_added(case_id, update_data.note, actor="system")  # TODO: actual user
-    
+
     session.commit()
-    
+
     return case_repo.get_by_id(case_id)
 
 
@@ -183,19 +183,19 @@ async def assign_case(
 ):
     """Assign case to analyst/team."""
     from sentinelflow.repository import CaseRepository, EventRepository
-    
+
     case_repo = CaseRepository(session)
     event_repo = EventRepository(session)
-    
+
     current = case_repo.get_by_id(case_id)
     if not current:
         raise HTTPException(status_code=404, detail=f"Case {case_id} not found")
-    
+
     case = case_repo.assign(case_id, assigned_to, assigned_team)
     event_repo.log_assignment(case_id, current.assigned_to, assigned_to)
-    
+
     session.commit()
-    
+
     return case
 
 
@@ -210,19 +210,19 @@ async def add_alert_to_case(
 ):
     """Add an alert to an existing case."""
     from sentinelflow.repository import CaseRepository, EventRepository
-    
+
     case_repo = CaseRepository(session)
     event_repo = EventRepository(session)
-    
+
     success = case_repo.add_alert(case_id, alert_id)
-    
+
     if not success:
         raise HTTPException(status_code=404, detail="Case or alert not found")
-    
+
     event_repo.log_alert_linked(case_id, alert_id)
-    
+
     session.commit()
-    
+
     return {"status": "added", "case_id": case_id, "alert_id": alert_id}
 
 
@@ -239,7 +239,7 @@ async def get_case_events(
 ):
     """Get audit log events for a case."""
     from sentinelflow.repository import EventRepository
-    
+
     repo = EventRepository(session)
     events, total = repo.list_by_case(
         case_id,
@@ -247,7 +247,7 @@ async def get_case_events(
         page_size=page_size,
         event_type=event_type,
     )
-    
+
     return {
         "total": total,
         "page": page,

@@ -23,7 +23,7 @@ from loguru import logger
 def get_database_url(async_driver: bool = False) -> str:
     """
     Build database URL from environment variables.
-    
+
     Environment variables:
         POSTGRES_HOST: Database host (default: localhost)
         POSTGRES_PORT: Database port (default: 5432)
@@ -38,13 +38,13 @@ def get_database_url(async_driver: bool = False) -> str:
         if async_driver and "postgresql://" in full_url:
             return full_url.replace("postgresql://", "postgresql+asyncpg://")
         return full_url
-    
+
     host = os.getenv("POSTGRES_HOST", "localhost")
     port = os.getenv("POSTGRES_PORT", "5432")
     user = os.getenv("POSTGRES_USER", "sentinelflow")
     password = os.getenv("POSTGRES_PASSWORD", "sentinelflow_secret")
     database = os.getenv("POSTGRES_DB", "sentinelflow")
-    
+
     if async_driver:
         return f"postgresql+asyncpg://{user}:{password}@{host}:{port}/{database}"
     return f"postgresql+psycopg2://{user}:{password}@{host}:{port}/{database}"
@@ -72,7 +72,9 @@ def get_engine():
             pool_pre_ping=True,
             echo=os.getenv("SQL_ECHO", "false").lower() == "true",
         )
-        logger.info(f"PostgreSQL engine created: {url.split('@')[1] if '@' in url else 'configured'}")
+        logger.info(
+            f"PostgreSQL engine created: {url.split('@')[1] if '@' in url else 'configured'}"
+        )
     return _engine
 
 
@@ -98,7 +100,7 @@ def get_session() -> Session:
 def DatabaseSession() -> Generator[Session, None, None]:
     """
     Context manager for database sessions.
-    
+
     Usage:
         with DatabaseSession() as db:
             db.query(AlertModel).all()
@@ -161,7 +163,7 @@ async def get_async_session() -> AsyncSession:
 async def AsyncDatabaseSession() -> AsyncGenerator[AsyncSession, None]:
     """
     Async context manager for database sessions.
-    
+
     Usage:
         async with AsyncDatabaseSession() as db:
             result = await db.execute(select(AlertModel))
@@ -181,21 +183,22 @@ async def AsyncDatabaseSession() -> AsyncGenerator[AsyncSession, None]:
 # Database Initialization
 # =============================================================================
 
+
 def init_db(drop_all: bool = False) -> None:
     """
     Initialize database tables.
-    
+
     Args:
         drop_all: If True, drop all tables before creating (DANGER!)
     """
     from sentinelflow.database.models import Base
-    
+
     engine = get_engine()
-    
+
     if drop_all:
         logger.warning("Dropping all tables!")
         Base.metadata.drop_all(bind=engine)
-    
+
     Base.metadata.create_all(bind=engine)
     logger.info("Database tables created/verified")
 
@@ -203,14 +206,14 @@ def init_db(drop_all: bool = False) -> None:
 async def init_db_async(drop_all: bool = False) -> None:
     """Async version of init_db."""
     from sentinelflow.database.models import Base
-    
+
     engine = get_async_engine()
-    
+
     async with engine.begin() as conn:
         if drop_all:
             logger.warning("Dropping all tables!")
             await conn.run_sync(Base.metadata.drop_all)
-        
+
         await conn.run_sync(Base.metadata.create_all)
-    
+
     logger.info("Database tables created/verified (async)")

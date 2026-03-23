@@ -48,6 +48,7 @@ from sentinelflow.ml.models import IsolationForestModel, XGBoostFraudModel
 # Optional torch-dependent components
 try:
     from sentinelflow.ml.models import AutoEncoderModel
+
     HAS_AUTOENCODER = True
 except (ImportError, OSError) as e:
     logger.warning(f"AutoEncoder not available (torch issue): {e}")
@@ -127,29 +128,24 @@ __all__ = [
     "AdvancedFeatureEngine",
     "CombinedFeatureEngine",
     "ADVANCED_FEATURE_NAMES",
-    
     # Graph features
     "GraphFeatureEngine",
     "InMemoryGraphFeatureEngine",
     "GRAPH_FEATURE_NAMES",
-    
     # Base models
     "IsolationForestModel",
     "XGBoostFraudModel",
     "AutoEncoderModel",
     "HAS_AUTOENCODER",
-    
     # Advanced models (TEKNOFEST)
     "LightGBMFraudModel",
     "CatBoostFraudModel",
     "GNNFraudModel",
     "TemporalFraudModel",
-    
     # Ensemble methods
     "EnsembleVoter",
     "StackingEnsemble",
     "create_competition_ensemble",
-    
     # Utilities
     "FraudExplainer",
     "DataBalancer",

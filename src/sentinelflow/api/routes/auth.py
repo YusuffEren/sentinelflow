@@ -40,22 +40,22 @@ async def login(
 ):
     """Authenticate user and return tokens."""
     auth_service = AuthService(session)
-    
+
     try:
         # Get client info
         user_agent = request.headers.get("user-agent")
         ip_address = request.client.host if request.client else None
-        
+
         tokens = auth_service.login(
             username=login_data.username,
             password=login_data.password,
             user_agent=user_agent,
             ip_address=ip_address,
         )
-        
+
         session.commit()
         return tokens
-    
+
     except ValueError as e:
         session.rollback()
         raise HTTPException(status_code=401, detail=str(e))
@@ -75,7 +75,7 @@ async def logout(
     auth_service = AuthService(session)
     auth_service.logout(user.user_id, refresh_token)
     session.commit()
-    
+
     return {"message": "Logged out successfully"}
 
 
@@ -91,11 +91,11 @@ async def register(
 ):
     """Register a new user."""
     auth_service = AuthService(session)
-    
+
     try:
         user = auth_service.register(user_data)
         session.commit()
-        
+
         return UserPublic(
             user_id=user.user_id,
             username=user.username,
@@ -103,7 +103,7 @@ async def register(
             role=user.role,
             team=user.team,
         )
-    
+
     except ValueError as e:
         session.rollback()
         raise HTTPException(status_code=400, detail=str(e))
@@ -122,20 +122,20 @@ async def refresh_tokens(
 ):
     """Refresh access token."""
     auth_service = AuthService(session)
-    
+
     try:
         user_agent = request.headers.get("user-agent")
         ip_address = request.client.host if request.client else None
-        
+
         tokens = auth_service.refresh_tokens(
             refresh_token=refresh_data.refresh_token,
             user_agent=user_agent,
             ip_address=ip_address,
         )
-        
+
         session.commit()
         return tokens
-    
+
     except ValueError as e:
         session.rollback()
         raise HTTPException(status_code=401, detail=str(e))
@@ -166,7 +166,7 @@ async def change_password(
 ):
     """Change user password."""
     auth_service = AuthService(session)
-    
+
     try:
         auth_service.change_password(
             user_id=user.user_id,
@@ -174,9 +174,9 @@ async def change_password(
             new_password=password_data.new_password,
         )
         session.commit()
-        
+
         return {"message": "Password changed successfully"}
-    
+
     except ValueError as e:
         session.rollback()
         raise HTTPException(status_code=400, detail=str(e))

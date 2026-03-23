@@ -27,11 +27,11 @@ def generate_event_id() -> str:
 
 class EventRepository:
     """Repository for audit event operations."""
-    
+
     def __init__(self, session: Session | AsyncSession):
         self._session = session
         self._is_async = isinstance(session, AsyncSession)
-    
+
     def create(
         self,
         case_id: str,
@@ -51,9 +51,9 @@ class EventRepository:
         """Create a new audit event (sync)."""
         event_id = generate_event_id()
         now = datetime.now(timezone.utc)
-        
+
         event_type_val = event_type.value if isinstance(event_type, EventType) else event_type
-        
+
         model = CaseEventModel(
             event_id=event_id,
             case_id=case_id,
@@ -70,12 +70,12 @@ class EventRepository:
             ip_address=ip_address,
             user_agent=user_agent,
         )
-        
+
         self._session.add(model)
         self._session.flush()
-        
+
         logger.debug(f"Event created: {event_id} | {event_type_val} | {case_id}")
-        
+
         return CaseEvent(
             event_id=event_id,
             case_id=case_id,
@@ -92,7 +92,7 @@ class EventRepository:
             ip_address=ip_address,
             user_agent=user_agent,
         )
-    
+
     async def create_async(
         self,
         case_id: str,
@@ -112,9 +112,9 @@ class EventRepository:
         """Create a new audit event (async)."""
         event_id = generate_event_id()
         now = datetime.now(timezone.utc)
-        
+
         event_type_val = event_type.value if isinstance(event_type, EventType) else event_type
-        
+
         model = CaseEventModel(
             event_id=event_id,
             case_id=case_id,
@@ -131,12 +131,12 @@ class EventRepository:
             ip_address=ip_address,
             user_agent=user_agent,
         )
-        
+
         self._session.add(model)
         await self._session.flush()
-        
+
         logger.debug(f"Event created: {event_id} | {event_type_val} | {case_id}")
-        
+
         return CaseEvent(
             event_id=event_id,
             case_id=case_id,
@@ -153,7 +153,7 @@ class EventRepository:
             ip_address=ip_address,
             user_agent=user_agent,
         )
-    
+
     def list_by_case(
         self,
         case_id: str,
@@ -164,41 +164,49 @@ class EventRepository:
     ) -> tuple[list[CaseEvent], int]:
         """List events for a case (sync)."""
         stmt = select(CaseEventModel).where(CaseEventModel.case_id == case_id)
-        count_stmt = select(func.count(CaseEventModel.event_id)).where(CaseEventModel.case_id == case_id)
-        
+        count_stmt = select(func.count(CaseEventModel.event_id)).where(
+            CaseEventModel.case_id == case_id
+        )
+
         if event_type:
             stmt = stmt.where(CaseEventModel.event_type == event_type)
             count_stmt = count_stmt.where(CaseEventModel.event_type == event_type)
-        
+
         total = self._session.execute(count_stmt).scalar() or 0
-        
+
         stmt = stmt.order_by(desc(CaseEventModel.created_at))
         stmt = stmt.offset((page - 1) * page_size).limit(page_size)
-        
+
         result = self._session.execute(stmt)
         models = result.scalars().all()
-        
+
         events = []
         for m in models:
-            events.append(CaseEvent(
-                event_id=m.event_id,
-                case_id=m.case_id,
-                event_type=EventType(m.event_type) if m.event_type in [e.value for e in EventType] else m.event_type,
-                actor=m.actor,
-                actor_type=m.actor_type,
-                description=m.description,
-                previous_value=m.previous_value,
-                new_value=m.new_value,
-                extra_data=m.extra_data,
-                alert_id=m.alert_id,
-                transaction_id=m.transaction_id,
-                created_at=m.created_at,
-                ip_address=m.ip_address,
-                user_agent=m.user_agent,
-            ))
-        
+            events.append(
+                CaseEvent(
+                    event_id=m.event_id,
+                    case_id=m.case_id,
+                    event_type=(
+                        EventType(m.event_type)
+                        if m.event_type in [e.value for e in EventType]
+                        else m.event_type
+                    ),
+                    actor=m.actor,
+                    actor_type=m.actor_type,
+                    description=m.description,
+                    previous_value=m.previous_value,
+                    new_value=m.new_value,
+                    extra_data=m.extra_data,
+                    alert_id=m.alert_id,
+                    transaction_id=m.transaction_id,
+                    created_at=m.created_at,
+                    ip_address=m.ip_address,
+                    user_agent=m.user_agent,
+                )
+            )
+
         return events, total
-    
+
     async def list_by_case_async(
         self,
         case_id: str,
@@ -209,46 +217,54 @@ class EventRepository:
     ) -> tuple[list[CaseEvent], int]:
         """List events for a case (async)."""
         stmt = select(CaseEventModel).where(CaseEventModel.case_id == case_id)
-        count_stmt = select(func.count(CaseEventModel.event_id)).where(CaseEventModel.case_id == case_id)
-        
+        count_stmt = select(func.count(CaseEventModel.event_id)).where(
+            CaseEventModel.case_id == case_id
+        )
+
         if event_type:
             stmt = stmt.where(CaseEventModel.event_type == event_type)
             count_stmt = count_stmt.where(CaseEventModel.event_type == event_type)
-        
+
         total_result = await self._session.execute(count_stmt)
         total = total_result.scalar() or 0
-        
+
         stmt = stmt.order_by(desc(CaseEventModel.created_at))
         stmt = stmt.offset((page - 1) * page_size).limit(page_size)
-        
+
         result = await self._session.execute(stmt)
         models = result.scalars().all()
-        
+
         events = []
         for m in models:
-            events.append(CaseEvent(
-                event_id=m.event_id,
-                case_id=m.case_id,
-                event_type=EventType(m.event_type) if m.event_type in [e.value for e in EventType] else m.event_type,
-                actor=m.actor,
-                actor_type=m.actor_type,
-                description=m.description,
-                previous_value=m.previous_value,
-                new_value=m.new_value,
-                extra_data=m.extra_data,
-                alert_id=m.alert_id,
-                transaction_id=m.transaction_id,
-                created_at=m.created_at,
-                ip_address=m.ip_address,
-                user_agent=m.user_agent,
-            ))
-        
+            events.append(
+                CaseEvent(
+                    event_id=m.event_id,
+                    case_id=m.case_id,
+                    event_type=(
+                        EventType(m.event_type)
+                        if m.event_type in [e.value for e in EventType]
+                        else m.event_type
+                    ),
+                    actor=m.actor,
+                    actor_type=m.actor_type,
+                    description=m.description,
+                    previous_value=m.previous_value,
+                    new_value=m.new_value,
+                    extra_data=m.extra_data,
+                    alert_id=m.alert_id,
+                    transaction_id=m.transaction_id,
+                    created_at=m.created_at,
+                    ip_address=m.ip_address,
+                    user_agent=m.user_agent,
+                )
+            )
+
         return events, total
-    
+
     # =========================================================================
     # Convenience Methods for Common Events
     # =========================================================================
-    
+
     def log_case_created(self, case_id: str, actor: str = "system") -> CaseEvent:
         """Log case creation event."""
         return self.create(
@@ -257,7 +273,7 @@ class EventRepository:
             description="Case created",
             actor=actor,
         )
-    
+
     def log_status_change(
         self,
         case_id: str,
@@ -274,7 +290,7 @@ class EventRepository:
             new_value=new_status,
             actor=actor,
         )
-    
+
     def log_assignment(
         self,
         case_id: str,
@@ -291,7 +307,7 @@ class EventRepository:
             new_value=new_assignee,
             actor=actor,
         )
-    
+
     def log_note_added(
         self,
         case_id: str,
@@ -306,7 +322,7 @@ class EventRepository:
             actor=actor,
             actor_type="user",
         )
-    
+
     def log_alert_linked(
         self,
         case_id: str,

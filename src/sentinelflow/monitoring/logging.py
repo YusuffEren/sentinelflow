@@ -72,6 +72,7 @@ IBAN_MASK_LENGTH = 8  # Show last 8 characters of IBAN
 # JSON Log Formatter
 # =============================================================================
 
+
 def json_formatter(record: dict) -> str:
     """Format log record as JSON."""
     log_entry = {
@@ -83,23 +84,23 @@ def json_formatter(record: dict) -> str:
         "function": record["function"],
         "line": record["line"],
     }
-    
+
     # Add service info
     log_entry["service"] = os.getenv("SERVICE_NAME", "sentinelflow")
     log_entry["environment"] = os.getenv("ENVIRONMENT", "development")
-    
+
     # Add correlation/request IDs if available
     if correlation_id_var.get():
         log_entry["correlation_id"] = correlation_id_var.get()
     if request_id_var.get():
         log_entry["request_id"] = request_id_var.get()
-    
+
     # Add extra data
     if record["extra"]:
         # Redact sensitive data
         extra = redact_sensitive(record["extra"])
         log_entry["extra"] = extra
-    
+
     # Add exception info if present
     if record["exception"]:
         log_entry["exception"] = {
@@ -107,7 +108,7 @@ def json_formatter(record: dict) -> str:
             "value": str(record["exception"].value) if record["exception"].value else None,
             "traceback": record["exception"].traceback if record["exception"].traceback else None,
         }
-    
+
     return json.dumps(log_entry, ensure_ascii=False, default=str) + "\n"
 
 
@@ -115,12 +116,12 @@ def redact_sensitive(data: Any, depth: int = 0) -> Any:
     """Redact sensitive information from data."""
     if depth > 10:  # Prevent infinite recursion
         return data
-    
+
     if isinstance(data, dict):
         result = {}
         for key, value in data.items():
             key_lower = key.lower()
-            
+
             # Check for sensitive keys
             if any(s in key_lower for s in SENSITIVE_KEYS):
                 result[key] = "[REDACTED]"
@@ -130,10 +131,10 @@ def redact_sensitive(data: Any, depth: int = 0) -> Any:
             else:
                 result[key] = redact_sensitive(value, depth + 1)
         return result
-    
+
     elif isinstance(data, list):
         return [redact_sensitive(item, depth + 1) for item in data]
-    
+
     else:
         return data
 
@@ -142,16 +143,17 @@ def redact_sensitive(data: Any, depth: int = 0) -> Any:
 # Structured Logger
 # =============================================================================
 
+
 class StructuredLogger:
     """
     Structured logging manager for SentinelFlow.
-    
+
     Example:
         >>> slog = StructuredLogger(service_name="sentinelflow-api")
         >>> slog.setup()
         >>> slog.info("Transaction processed", transaction_id="TX-001", amount=5000)
     """
-    
+
     def __init__(
         self,
         service_name: str = "sentinelflow",
@@ -163,7 +165,7 @@ class StructuredLogger:
     ):
         """
         Initialize structured logger.
-        
+
         Args:
             service_name: Service name for logs
             log_level: Minimum log level
@@ -179,12 +181,12 @@ class StructuredLogger:
         self._rotation = rotation
         self._retention = retention
         self._configured = False
-    
+
     def setup(self) -> None:
         """Configure logging."""
         # Remove default handler
         logger.remove()
-        
+
         # Console handler
         if self._json_output:
             logger.add(
@@ -205,12 +207,12 @@ class StructuredLogger:
                 level=self._log_level,
                 colorize=True,
             )
-        
+
         # File handler
         if self._log_file:
             log_path = Path(self._log_file)
             log_path.parent.mkdir(parents=True, exist_ok=True)
-            
+
             logger.add(
                 str(log_path),
                 format=json_formatter,
@@ -219,7 +221,7 @@ class StructuredLogger:
                 retention=self._retention,
                 compression="gz",
             )
-        
+
         self._configured = True
         logger.info(
             f"Structured logging configured",
@@ -227,59 +229,59 @@ class StructuredLogger:
             level=self._log_level,
             json=self._json_output,
         )
-    
+
     def set_correlation_id(self, correlation_id: str | None = None) -> str:
         """Set correlation ID for current context."""
         cid = correlation_id or str(uuid.uuid4())
         correlation_id_var.set(cid)
         return cid
-    
+
     def set_request_id(self, request_id: str | None = None) -> str:
         """Set request ID for current context."""
         rid = request_id or str(uuid.uuid4())
         request_id_var.set(rid)
         return rid
-    
+
     def get_correlation_id(self) -> str:
         """Get current correlation ID."""
         return correlation_id_var.get()
-    
+
     def with_context(self, **context) -> Any:
         """Create a logger with bound context."""
         return logger.bind(**context)
-    
+
     # =========================================================================
     # Log Methods
     # =========================================================================
-    
+
     def debug(self, message: str, **kwargs) -> None:
         """Log debug message."""
         logger.debug(message, **kwargs)
-    
+
     def info(self, message: str, **kwargs) -> None:
         """Log info message."""
         logger.info(message, **kwargs)
-    
+
     def warning(self, message: str, **kwargs) -> None:
         """Log warning message."""
         logger.warning(message, **kwargs)
-    
+
     def error(self, message: str, **kwargs) -> None:
         """Log error message."""
         logger.error(message, **kwargs)
-    
+
     def critical(self, message: str, **kwargs) -> None:
         """Log critical message."""
         logger.critical(message, **kwargs)
-    
+
     def exception(self, message: str, **kwargs) -> None:
         """Log exception with traceback."""
         logger.exception(message, **kwargs)
-    
+
     # =========================================================================
     # Domain-Specific Logging
     # =========================================================================
-    
+
     def log_transaction(
         self,
         transaction_id: str,
@@ -298,7 +300,7 @@ class StructuredLogger:
             duration_ms=duration_ms,
             **extra,
         )
-    
+
     def log_fraud_alert(
         self,
         alert_id: str,
@@ -319,7 +321,7 @@ class StructuredLogger:
             confidence=confidence,
             **extra,
         )
-    
+
     def log_ml_prediction(
         self,
         model: str,
@@ -338,7 +340,7 @@ class StructuredLogger:
             transaction_id=transaction_id,
             **extra,
         )
-    
+
     def log_compliance(
         self,
         transaction_id: str,
@@ -356,7 +358,7 @@ class StructuredLogger:
             violations=violations or [],
             **extra,
         )
-    
+
     def log_api_request(
         self,
         method: str,
@@ -384,42 +386,44 @@ class StructuredLogger:
 # Decorators
 # =============================================================================
 
+
 def log_function(
     log_args: bool = True,
     log_result: bool = False,
     level: str = "DEBUG",
 ):
     """Decorator to log function entry and exit."""
+
     def decorator(func: Callable) -> Callable:
         @wraps(func)
         def sync_wrapper(*args, **kwargs):
             func_name = f"{func.__module__}.{func.__name__}"
-            
+
             # Log entry
             if log_args:
                 logger.log(level, f"Entering {func_name}", args=args, kwargs=kwargs)
             else:
                 logger.log(level, f"Entering {func_name}")
-            
+
             try:
                 result = func(*args, **kwargs)
-                
+
                 # Log exit
                 if log_result:
                     logger.log(level, f"Exiting {func_name}", result=result)
                 else:
                     logger.log(level, f"Exiting {func_name}")
-                
+
                 return result
             except Exception as e:
                 logger.error(f"Error in {func_name}: {e}")
                 raise
-        
+
         @wraps(func)
         async def async_wrapper(*args, **kwargs):
             func_name = f"{func.__module__}.{func.__name__}"
             logger.log(level, f"Entering {func_name}")
-            
+
             try:
                 result = await func(*args, **kwargs)
                 logger.log(level, f"Exiting {func_name}")
@@ -427,12 +431,13 @@ def log_function(
             except Exception as e:
                 logger.error(f"Error in {func_name}: {e}")
                 raise
-        
+
         import asyncio
+
         if asyncio.iscoroutinefunction(func):
             return async_wrapper
         return sync_wrapper
-    
+
     return decorator
 
 
