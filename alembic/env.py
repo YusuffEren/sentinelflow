@@ -14,7 +14,7 @@ from sqlalchemy import engine_from_config, pool
 from alembic import context
 
 # Add project root to path for imports
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 # Import our models for autogenerate support
 from sentinelflow.database.models import Base
@@ -30,6 +30,7 @@ if config.config_file_name is not None:
 # Set target metadata for autogenerate
 target_metadata = Base.metadata
 
+
 # Override sqlalchemy.url from environment
 def get_url():
     """Get database URL from environment or config."""
@@ -42,7 +43,7 @@ def get_url():
 def run_migrations_offline() -> None:
     """
     Run migrations in 'offline' mode.
-    
+
     This configures the context with just a URL and not an Engine,
     useful for generating SQL scripts without database access.
     """
@@ -63,12 +64,12 @@ def run_migrations_offline() -> None:
 def run_migrations_online() -> None:
     """
     Run migrations in 'online' mode.
-    
+
     Creates an Engine and associates a connection with the context.
     """
     configuration = config.get_section(config.config_ini_section, {})
     configuration["sqlalchemy.url"] = get_url()
-    
+
     connectable = engine_from_config(
         configuration,
         prefix="sqlalchemy.",
