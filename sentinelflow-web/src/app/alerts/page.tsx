@@ -47,7 +47,7 @@ interface AlertsResponse {
   alerts: Alert[]
 }
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"
+import { config, getApiUrl } from "@/lib/config"
 
 const severityColors: Record<string, string> = {
   low: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
@@ -94,7 +94,7 @@ export default function AlertsPage() {
       if (severityFilter) params.append("severity", severityFilter)
       if (fraudTypeFilter) params.append("fraud_type", fraudTypeFilter)
       
-      const res = await fetch(`${API_BASE}/api/v1/alerts?${params}`)
+      const res = await fetch(getApiUrl(`${config.endpoints.alerts}?${params}`))
       if (res.ok) {
         const data: AlertsResponse = await res.json()
         setAlerts(data.alerts)
@@ -127,7 +127,7 @@ export default function AlertsPage() {
   const handleDismiss = async (alertId: string) => {
     try {
       const res = await fetch(
-        `${API_BASE}/api/v1/alerts/${alertId}/dismiss`,
+        getApiUrl(config.endpoints.alertDismiss(alertId)),
         { method: "POST" }
       )
       if (res.ok) {

@@ -8,9 +8,10 @@ import { AlertFeed } from "@/components/dashboard/alert-feed"
 import { ThreatMap } from "@/components/dashboard/threat-map"
 import { AiChat } from "@/components/dashboard/ai-chat"
 import { Activity, ShieldAlert, CreditCard, Gauge } from "lucide-react"
+import { config, getApiUrl } from "@/lib/config"
 
 export default function Home() {
-  const { isConnected, alerts } = useWebSocket()
+  const { isConnected, alerts, reconnect } = useWebSocket()
 
   // System stats
   const [stats, setStats] = useState({
@@ -19,23 +20,31 @@ export default function Home() {
     fraud_rate: 0,
     uptime_seconds: 0
   })
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   // Fetch stats
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const res = await fetch("http://127.0.0.1:8000/api/v1/system/stats")
+        const res = await fetch(getApiUrl(config.endpoints.stats))
         if (res.ok) {
           const data = await res.json()
           setStats(data)
+          setError(null)
+        } else {
+          setError("API not available")
         }
       } catch (e) {
         console.error("Failed to fetch stats", e)
+        setError("Connection error")
+      } finally {
+        setLoading(false)
       }
     }
 
     fetchStats()
-    const interval = setInterval(fetchStats, 2000)
+    const interval = setInterval(fetchStats, config.ui.statsRefreshInterval)
     return () => clearInterval(interval)
   }, [])
 
@@ -45,7 +54,7 @@ export default function Home() {
   useEffect(() => {
     const fetchInitial = async () => {
       try {
-        const res = await fetch("http://127.0.0.1:8000/api/v1/alerts?page_size=20")
+        const res = await fetch(getApiUrl(`${config.endpoints.alerts}?page_size=20`))
         if (res.ok) {
           const data = await res.json()
           setInitialAlerts(data.alerts || [])

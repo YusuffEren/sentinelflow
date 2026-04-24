@@ -3,11 +3,12 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Shield, Eye, EyeOff, AlertCircle, Loader2 } from "lucide-react"
-import { login } from "@/lib/auth"
+import { useAuth } from "@/contexts/auth-context"
 import { cn } from "@/lib/utils"
 
 export default function LoginPage() {
   const router = useRouter()
+  const { login } = useAuth()
   
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
@@ -22,7 +23,6 @@ export default function LoginPage() {
     
     try {
       await login(username, password)
-      router.push("/")
     } catch (err: any) {
       setError(err.message || "Giriş başarısız")
     } finally {

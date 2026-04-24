@@ -40,7 +40,7 @@ interface CasesResponse {
   cases: Case[]
 }
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"
+import { config, getApiUrl } from "@/lib/config"
 
 const statusConfig: Record<string, { label: string; color: string; icon: any }> = {
   new: { label: "Yeni", color: "bg-blue-500/10 text-blue-400 border-blue-500/20", icon: AlertTriangle },
@@ -87,7 +87,7 @@ export default function CasesPage() {
       if (statusFilter) params.append("status", statusFilter)
       if (priorityFilter) params.append("priority", priorityFilter)
       
-      const res = await fetch(`${API_BASE}/api/v1/cases?${params}`)
+      const res = await fetch(getApiUrl(`${config.endpoints.cases}?${params}`))
       if (res.ok) {
         const data: CasesResponse = await res.json()
         setCases(data.cases)
@@ -102,7 +102,7 @@ export default function CasesPage() {
   
   const fetchStats = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/v1/cases/stats`)
+      const res = await fetch(getApiUrl(`${config.endpoints.cases}/stats`))
       if (res.ok) {
         setStats(await res.json())
       }

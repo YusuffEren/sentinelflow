@@ -45,6 +45,8 @@ from sentinelflow.api.routes.alerts import router as alerts_router
 from sentinelflow.api.routes.cases import router as cases_router
 from sentinelflow.api.routes.auth import router as auth_router
 from sentinelflow.api.routes.ml import router as ml_router
+from sentinelflow.api.routes.graph import router as graph_router
+from sentinelflow.api.routes.chat import router as chat_router
 
 
 # =============================================================================
@@ -212,6 +214,8 @@ app.include_router(auth_router, prefix="/api/v1")
 app.include_router(alerts_router, prefix="/api/v1")
 app.include_router(cases_router, prefix="/api/v1")
 app.include_router(ml_router, prefix="/api/v1")
+app.include_router(graph_router, prefix="/api/v1")
+app.include_router(chat_router, prefix="/api/v1")
 
 
 # =============================================================================

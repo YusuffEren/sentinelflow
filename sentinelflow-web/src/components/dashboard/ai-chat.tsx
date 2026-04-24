@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react"
 import { Bot, Send, ChevronUp, ChevronDown, Sparkles } from "lucide-react"
+import { config, getApiUrl } from "@/lib/config"
 
 interface Message {
   role: "user" | "assistant"
@@ -31,7 +32,7 @@ export function AiChat() {
     setIsExpanded(true)
 
     try {
-      const res = await fetch("http://127.0.0.1:8000/api/v1/chat", {
+      const res = await fetch(getApiUrl(config.endpoints.chat), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -44,10 +45,10 @@ export function AiChat() {
         const data = await res.json()
         setMessages(prev => [...prev, { role: "assistant", content: data.response }])
       } else {
-        setMessages(prev => [...prev, { role: "assistant", content: "Unable to connect. Please try again." }])
+        setMessages(prev => [...prev, { role: "assistant", content: "AI servisine bağlanılamıyor. Lütfen tekrar deneyin." }])
       }
     } catch {
-      setMessages(prev => [...prev, { role: "assistant", content: "Connection error. Please try again." }])
+      setMessages(prev => [...prev, { role: "assistant", content: "Bağlantı hatası. Lütfen tekrar deneyin." }])
     } finally {
       setIsTyping(false)
     }

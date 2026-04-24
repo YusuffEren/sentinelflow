@@ -1,13 +1,23 @@
 "use client"
 
-import { createContext, useContext, useEffect, useState, ReactNode } from "react"
+import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from "react"
 import { useRouter, usePathname } from "next/navigation"
-import { User, getStoredUser, getToken, logout as authLogout, refreshTokens } from "@/lib/auth"
+import { 
+  User, 
+  getStoredUser, 
+  getToken, 
+  logout as authLogout, 
+  refreshTokens,
+  login as authLogin,
+  fetchCurrentUser
+} from "@/lib/auth"
+import { config } from "@/lib/config"
 
 interface AuthContextType {
   user: User | null
   isLoading: boolean
   isAuthenticated: boolean
+  login: (username: string, password: string) => Promise<void>
   logout: () => Promise<void>
   refreshUser: () => void
 }
@@ -24,9 +34,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
   
   const isPublicPath = PUBLIC_PATHS.includes(pathname)
+  const authEnabled = config.features.enableAuth
   
   useEffect(() => {
     const checkAuth = async () => {
+      if (!authEnabled) {
+        setIsLoading(false)
+        return
+      }
+      
       const token = getToken()
       const storedUser = getStoredUser()
       
@@ -34,20 +50,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(storedUser)
         setIsLoading(false)
         
-        // Redirect from login page if already authenticated
         if (isPublicPath) {
           router.push("/")
         }
       } else if (token) {
-        // Token exists but no user, try to refresh
-        const newTokens = await refreshTokens()
-        if (!newTokens && !isPublicPath) {
-          router.push("/login")
+        try {
+          const newTokens = await refreshTokens()
+          if (newTokens) {
+            const currentUser = await fetchCurrentUser()
+            setUser(currentUser)
+          } else if (!isPublicPath) {
+            router.push("/login")
+          }
+        } catch {
+          if (!isPublicPath) {
+            router.push("/login")
+          }
         }
         setIsLoading(false)
       } else {
-        // No token
-        if (!isPublicPath) {
+        if (!isPublicPath && authEnabled) {
           router.push("/login")
         }
         setIsLoading(false)
@@ -55,20 +77,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     
     checkAuth()
-  }, [pathname, isPublicPath, router])
+  }, [pathname, isPublicPath, router, authEnabled])
   
-  const logout = async () => {
+  const login = useCallback(async (username: string, password: string) => {
+    const loggedInUser = await authLogin(username, password)
+    setUser(loggedInUser)
+    router.push("/")
+  }, [router])
+  
+  const logout = useCallback(async () => {
     await authLogout()
     setUser(null)
     router.push("/login")
-  }
+  }, [router])
   
-  const refreshUser = () => {
+  const refreshUser = useCallback(() => {
     setUser(getStoredUser())
-  }
+  }, [])
   
-  // Don't render anything while checking auth on protected pages
-  if (isLoading && !isPublicPath) {
+  if (isLoading && !isPublicPath && authEnabled) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#09090B]">
         <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
@@ -82,6 +109,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         isLoading,
         isAuthenticated: !!user,
+        login,
         logout,
         refreshUser,
       }}
