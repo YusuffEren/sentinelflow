@@ -44,7 +44,7 @@ try:
     from torch.optim.lr_scheduler import ReduceLROnPlateau
 
     HAS_TORCH = True
-except ImportError:
+except (ImportError, OSError):
     HAS_TORCH = False
     logger.warning("PyTorch not available, GNN model disabled")
 

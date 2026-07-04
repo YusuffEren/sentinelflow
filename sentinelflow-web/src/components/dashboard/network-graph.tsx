@@ -115,9 +115,10 @@ export function NetworkGraph({
         }
     }, [externalData, fetchGraphData])
 
-    const handleNodeClick = useCallback((node: GraphNode) => {
-        setSelectedNode(node)
-        if (fgRef.current) {
+    const handleNodeClick = useCallback((node: Record<string, unknown>, _event: MouseEvent) => {
+        const typedNode = node as unknown as GraphNode
+        setSelectedNode(typedNode)
+        if (fgRef.current && typeof node.x === 'number' && typeof node.y === 'number') {
             fgRef.current.centerAt(node.x, node.y, 1000)
             fgRef.current.zoom(2, 1000)
         }

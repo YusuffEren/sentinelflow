@@ -48,7 +48,7 @@ try:
     import torch.nn as nn
 
     HAS_TORCH = True
-except ImportError:
+except (ImportError, OSError):
     HAS_TORCH = False
     logger.warning("torch not available, AutoEncoder model disabled")
 
@@ -265,12 +265,21 @@ class XGBoostFraudModel(BaseFraudModel):
         )
 
     def _load_model(self, path: str) -> None:
-        """Load a pre-trained XGBoost model from file."""
+        """Load a pre-trained XGBoost model from file, including scaler."""
         try:
-            self._model = xgb.XGBClassifier()
-            self._model.load_model(path)
-            self._is_fitted = True
-            logger.info(f"XGBoost model loaded from {path}")
+            # Check if this is a pickle wrapper (contains model + scaler)
+            if path.endswith('.pkl'):
+                with open(path, 'rb') as f:
+                    data = pickle.load(f)
+                self._model = data.get("model")
+                self._scaler = data.get("scaler")
+                self._is_fitted = True
+                logger.info(f"XGBoost model + scaler loaded from {path}")
+            else:
+                self._model = xgb.XGBClassifier()
+                self._model.load_model(path)
+                self._is_fitted = True
+                logger.info(f"XGBoost model loaded from {path}")
         except Exception as e:
             logger.error(f"Failed to load XGBoost model: {e}")
             self._model = None
@@ -303,12 +312,14 @@ class XGBoostFraudModel(BaseFraudModel):
         logger.info(f"XGBoost trained on {len(X)} samples ({int(y.sum())} fraud)")
 
     def save(self, path: str | None = None) -> None:
-        """Save trained model to file."""
+        """Save trained model and scaler to file (pickle wrapper)."""
         if self._model is not None:
             path = path or "models/xgboost_fraud.json"
             Path(path).parent.mkdir(parents=True, exist_ok=True)
-            self._model.save_model(path)
-            logger.info(f"XGBoost model saved to {path}")
+            # Save both model and scaler using pickle for consistency
+            with open(path, "wb") as f:
+                pickle.dump({"model": self._model, "scaler": self._scaler}, f)
+            logger.info(f"XGBoost model + scaler saved to {path}")
 
     def predict_proba(self, X: np.ndarray) -> np.ndarray:
         """Return fraud probability for each sample."""

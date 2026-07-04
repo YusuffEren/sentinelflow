@@ -1,21 +1,46 @@
 import type { Metadata } from "next"
-import { Geist, Geist_Mono } from "next/font/google"
+import { Space_Grotesk, Inter, JetBrains_Mono } from "next/font/google"
 import "./globals.css"
 import { AuthProvider } from "@/contexts/auth-context"
 
-const geist = Geist({ 
+const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
-  variable: "--font-geist",
+  variable: "--font-display-google",
+  display: "swap",
 })
 
-const geistMono = Geist_Mono({ 
+const inter = Inter({
   subsets: ["latin"],
-  variable: "--font-geist-mono",
+  variable: "--font-body-google",
+  display: "swap",
+})
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-mono-google",
+  display: "swap",
 })
 
 export const metadata: Metadata = {
-  title: "SentinelFlow",
-  description: "Real-time Fraud Detection System",
+  title: "SentinelFlow — Real-Time Financial Fraud Detection",
+  description:
+    "Para hareket ederken dolandırıcılığı yakalar. Kafka, Neo4j, Redis ve Isolation Forest ile dairesel aklama, imkansız seyahat ve anomali tespiti.",
+  keywords: [
+    "fraud detection",
+    "money laundering",
+    "Neo4j",
+    "Kafka",
+    "Redis",
+    "Isolation Forest",
+    "real-time",
+    "SOC",
+  ],
+  openGraph: {
+    title: "SentinelFlow — Real-Time Financial Fraud Detection",
+    description:
+      "Gerçek zamanlı finansal dolandırıcılık tespit sistemi. Sub-100ms gecikme, 10.000 tx/sn.",
+    type: "website",
+  },
 }
 
 export default function RootLayout({
@@ -24,12 +49,12 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className="dark">
-      <body className={`${geist.variable} ${geistMono.variable} font-sans bg-[#09090B] text-zinc-50 antialiased`}>
+    <html lang="tr" className="dark">
+      <body
+        className={`${spaceGrotesk.variable} ${inter.variable} ${jetbrainsMono.variable} font-sans bg-base text-zinc-100 antialiased`}
+      >
         <AuthProvider>
-          <div className="min-h-screen">
-            {children}
-          </div>
+          <div className="min-h-screen">{children}</div>
         </AuthProvider>
       </body>
     </html>

@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Set, Tuple
 from enum import Enum
 
@@ -230,7 +230,7 @@ class GraphFeatureEngine:
         # Check cache
         if iban in self._feature_cache:
             cached, timestamp = self._feature_cache[iban]
-            if (datetime.utcnow() - timestamp).seconds < self._cache_ttl:
+            if (datetime.now(timezone.utc) - timestamp).seconds < self._cache_ttl:
                 return cached
 
         features: Dict[str, float] = {name: 0.0 for name in GRAPH_FEATURE_NAMES}
@@ -268,7 +268,7 @@ class GraphFeatureEngine:
             logger.error(f"Error extracting graph features for {iban}: {e}")
 
         # Cache features
-        self._feature_cache[iban] = (features, datetime.utcnow())
+        self._feature_cache[iban] = (features, datetime.now(timezone.utc))
 
         return features
 

@@ -6,6 +6,9 @@ global:
   external_labels:
     monitor: 'sentinelflow'
 
+rule_files:
+  - 'prometheus_alerts.yml'
+
 scrape_configs:
   # Prometheus self-monitoring
   - job_name: 'prometheus'

@@ -19,7 +19,7 @@ from fastapi.testclient import TestClient
 
 
 @pytest.fixture
-def client():
+def client(mock_db_session):
     """Create test client."""
     from sentinelflow.api.app import app
     return TestClient(app)

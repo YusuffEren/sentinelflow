@@ -29,34 +29,9 @@ except ImportError:
     HAS_SHAP = False
     logger.warning("shap not available, explainability will use fallback method")
 
-
-# =============================================================================
-# Human-Readable Feature Descriptions
-# =============================================================================
-
-FEATURE_DESCRIPTIONS: dict[str, str] = {
-    "amount_raw": "İşlem tutarı",
-    "amount_log": "İşlem tutarı (logaritmik)",
-    "amount_zscore": "İşlem tutarının normalden sapması",
-    "amount_to_mean_ratio": "Ortalamaya göre tutar oranı",
-    "amount_percentile": "Tutar yüzdelik dilimi",
-    "hour_of_day": "İşlem saati",
-    "day_of_week": "İşlem günü",
-    "is_weekend": "Hafta sonu işlemi",
-    "is_night": "Gece saati işlemi",
-    "hour_sin": "Saat döngüsel kodlaması",
-    "sender_tx_count_1h": "Son 1 saatteki işlem sayısı",
-    "sender_tx_count_24h": "Son 24 saatteki işlem sayısı",
-    "sender_amount_sum_1h": "Son 1 saatteki toplam tutar",
-    "sender_avg_amount": "Göndericinin ortalama işlem tutarı",
-    "desc_length": "Açıklama uzunluğu",
-    "desc_word_count": "Açıklama kelime sayısı",
-    "has_suspicious_chars": "Şüpheli karakter içeriyor",
-    "keyword_score": "Şüpheli anahtar kelime skoru",
-    "city_distance_km": "Şehirler arası mesafe (km)",
-    "sender_receiver_same_city": "Aynı şehir transferi",
-    "is_international": "Uluslararası transfer",
-}
+# Feature açıklamaları feature_engine.py'de tek kaynak (single source of truth)
+# olarak tanımlıdır; burada yeniden tanımlamak yerine import ediyoruz.
+from sentinelflow.ml.feature_engine import FEATURE_DESCRIPTIONS
 
 
 # =============================================================================

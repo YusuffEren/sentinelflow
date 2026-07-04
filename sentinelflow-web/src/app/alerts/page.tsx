@@ -118,8 +118,30 @@ export default function AlertsPage() {
         (wa) => !alerts.find((a) => a.alert_id === wa.alert_id)
       )
       if (newAlerts.length > 0) {
-        setAlerts((prev) => [...newAlerts, ...prev].slice(0, pageSize))
-        setTotal((prev) => prev + newAlerts.length)
+        setAlerts((prev) => {
+          const wsMapped: Alert[] = newAlerts.map((wa) => ({
+            alert_id: wa.alert_id,
+            fraud_type: wa.fraud_type,
+            severity: wa.severity,
+            confidence: wa.confidence,
+            transaction_id: wa.alert_id,
+            sender_iban: wa.sender_iban || "",
+            sender_name: "",
+            sender_city: "",
+            receiver_iban: wa.receiver_iban || "",
+            receiver_name: "",
+            receiver_city: "",
+            amount: wa.amount,
+            currency: "TRY",
+            title: wa.fraud_type,
+            description: wa.description,
+            detected_at: wa.detected_at,
+            is_dismissed: false,
+            case_id: null,
+          }))
+          return [...wsMapped, ...prev].slice(0, pageSize)
+        })
+        setTotal((prevCount) => prevCount + newAlerts.length)
       }
     }
   }, [wsAlerts, page, alerts, pageSize])

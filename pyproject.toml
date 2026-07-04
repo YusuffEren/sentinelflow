@@ -185,7 +185,7 @@ benchmark = [
 
 [project.scripts]
 sentinelflow-generate = "sentinelflow.generator.cli:main"
-sentinelflow-detect = "sentinelflow.detectors.cli:main"
+sentinelflow-detect = "sentinelflow.processor.detector:main"
 sentinelflow-dashboard = "sentinelflow.dashboard.app:main"
 
 [project.urls]

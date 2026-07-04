@@ -198,8 +198,9 @@ Access at: http://localhost:8501
 Detects money laundering patterns where funds flow in a circle.
 
 ```cypher
-MATCH path = (a:Account)-[:TRANSACTION*3..6]->(a)
-WHERE ALL(r IN relationships(path) WHERE r.timestamp > datetime() - duration('P7D'))
+MATCH path = (a:User)-[:SENT*3..6]->(a)
+WHERE ALL(r IN relationships(path) WHERE r.fraud_type <> 'none'
+    AND r.timestamp > datetime() - duration('P7D'))
 RETURN path
 ```
 
@@ -266,45 +267,97 @@ Uses unsupervised machine learning to detect statistically unusual transactions.
 
 ```
 sentinelflow/
-├── docker-compose.yml          # Infrastructure orchestration
-├── pyproject.toml              # Python dependencies and tooling
-├── .env.example                # Environment configuration template
-├── README.md                   # This file
+├── docker-compose.yml              # Infrastructure orchestration
+├── pyproject.toml                  # Python dependencies and tooling
+├── .env.example                    # Environment configuration template
+├── README.md                       # This file
+├── Dockerfile                      # Container image
 │
-├── src/
-│   └── sentinelflow/
-│       ├── __init__.py
-│       ├── config/             # Configuration management
-│       │   ├── __init__.py
-│       │   └── settings.py
-│       │
-│       ├── generator/          # Synthetic data generation
-│       │   ├── __init__.py
-│       │   ├── cli.py
-│       │   ├── main.py
-│       │   ├── models.py
-│       │   └── patterns.py
-│       │
-│       ├── processor/          # Fraud detection engines
-│       │   ├── __init__.py
-│       │   ├── detector.py     # Main detector service
-│       │   ├── graph_engine.py # Neo4j integration
-│       │   └── redis_geo.py    # Redis geo-spatial
-│       │
-│       ├── ingestor/           # Kafka producers
-│       │   ├── __init__.py
-│       │   └── producer.py
-│       │
-│       └── dashboard/          # Streamlit visualization
-│           ├── __init__.py
-│           └── app.py
+├── src/sentinelflow/
+│   ├── config/                     # Configuration (Pydantic Settings)
+│   ├── contracts/                  # Pydantic schemas (single source of truth)
+│   │   ├── enums.py, alert.py, case.py, transaction.py, user.py
+│   │
+│   ├── api/                        # FastAPI REST API
+│   │   ├── app.py                  # Main app, WebSocket, /metrics
+│   │   ├── schemas.py, deps.py, risk_scoring.py
+│   │   └── routes/                 # alerts, cases, auth, ml, graph, chat
+│   │
+│   ├── database/                   # PostgreSQL (SQLAlchemy 2.0 + Alembic)
+│   │   ├── models.py               # 6 ORM models
+│   │   └── postgres.py             # Connection management
+│   │
+│   ├── repository/                 # Repository pattern (Alert, Case, Event)
+│   │
+│   ├── auth/                       # JWT authentication
+│   │   ├── service.py, dependencies.py, password.py, config.py
+│   │
+│   ├── security/                   # Rate limiting, input validation
+│   │
+│   ├── generator/                  # Synthetic transaction generation
+│   │   ├── main.py, cli.py, patterns.py, models.py
+│   │
+│   ├── processor/                  # Fraud detection engines
+│   │   ├── detector.py             # Main detector service
+│   │   ├── graph_engine.py         # Neo4j integration
+│   │   └── redis_geo.py            # Redis geo-spatial
+│   │
+│   ├── ingestor/                   # Kafka consumer bridge
+│   │
+│   ├── ml/                         # ML pipeline (21 features, 6 models)
+│   │   ├── feature_engine.py       # TransactionFeatureEngine
+│   │   ├── advanced_features.py    # +32 statistical features
+│   │   ├── models.py               # IsolationForest, XGBoost, AutoEncoder
+│   │   ├── advanced_models.py      # LightGBM, CatBoost, StackingEnsemble
+│   │   ├── ensemble.py             # EnsembleVoter (weighted voting)
+│   │   ├── explainer.py            # SHAP-based explainability
+│   │   ├── gnn_model.py            # Graph Neural Network
+│   │   ├── temporal_model.py       # LSTM/Transformer
+│   │   ├── train_pipeline.py       # End-to-end training
+│   │   ├── dataset_loader.py       # FraudDatasetLoader
+│   │   └── federated/              # Federated learning (Flower)
+│   │
+│   ├── kyc/                        # KYC compliance (PEP, Sanctions, CDD)
+│   ├── compliance/                 # MASAK, audit logging
+│   ├── monitoring/                 # OpenTelemetry, Prometheus metrics
+│   ├── dashboard/                  # Streamlit SOC dashboard
+│   │   └── app.py, components.py, competition_dashboard.py
+│   └── detectors/                  # CLI entry points
 │
-├── scripts/                    # Utility scripts
-│   ├── init_kafka_topics.sh
-│   └── init_neo4j_schema.cypher
+├── sentinelflow-web/               # Next.js 16 frontend
+│   ├── src/app/                    # Pages: dashboard, alerts, cases, login
+│   ├── src/components/             # dashboard/, layout/, ui/
+│   └── package.json
 │
-└── tests/                      # Test suite
-    └── __init__.py
+├── alembic/                        # Database migrations
+│   └── versions/                   # 001_initial_schema, 002_add_users
+│
+├── models/                         # Pre-trained ML models (8 files)
+│   ├── xgboost.json, lightgbm.txt, catboost.cbm
+│   ├── isolation_forest.pkl, autoencoder.pt, scaler.pkl
+│   └── training_report.json
+│
+├── scripts/                        # Utility scripts (11 adet)
+│   ├── init_kafka_topics.sh, init_neo4j_schema.cypher, init_postgres.sql
+│   ├── train_baseline.py, train_competition.py, optimize_hyperparams.py
+│   └── run_demo.py, replay_transactions.py
+│
+├── data/                           # Competition dataset (200k rows)
+│
+├── docs/                           # Documentation (7 doküman)
+│   ├── architecture.md, api.md, ml_model_cards.md, mlops.md
+│   └── SPRINT1_DEMO.md, SPRINT2_DEMO.md
+│
+├── .github/workflows/              # CI + ML Pipeline
+│
+├── tests/                          # 111 test, 7 dosya
+│   ├── test_api.py                 # API endpoints (24 test)
+│   ├── test_ml_models.py           # ML models (27 test)
+│   ├── test_ml_pipeline.py         # ML pipeline (25 test)
+│   ├── test_compliance.py          # Compliance (11 test)
+│   ├── test_kyc.py                 # KYC (8 test)
+│   ├── test_federated.py           # Federated learning (9 test)
+│   └── conftest.py                 # Fixtures ve mock DB
 ```
 
 ---
@@ -345,7 +398,7 @@ sentinelflow/
 | Topic | Purpose | Message Format |
 |-------|---------|----------------|
 | `transactions` | Incoming transaction stream | JSON |
-| `fraud_alerts` | Detected fraud alerts | JSON |
+| `alerts` | Detected fraud alerts | JSON |
 
 ### Transaction Message Schema
 

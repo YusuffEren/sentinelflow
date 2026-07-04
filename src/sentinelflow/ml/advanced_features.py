@@ -22,7 +22,7 @@ import math
 import hashlib
 from collections import defaultdict, deque, Counter
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Set, Tuple
 from enum import Enum
 
@@ -765,13 +765,13 @@ class AdvancedFeatureEngine:
     def _parse_timestamp(ts_str: str) -> datetime:
         """Parse ISO timestamp string."""
         if not ts_str:
-            return datetime.utcnow()
+            return datetime.now(timezone.utc)
         try:
             if "T" in ts_str:
                 return datetime.fromisoformat(ts_str.replace("Z", "+00:00").replace("+00:00", ""))
-            return datetime.utcnow()
+            return datetime.now(timezone.utc)
         except (ValueError, TypeError):
-            return datetime.utcnow()
+            return datetime.now(timezone.utc)
 
     @staticmethod
     def get_feature_names() -> List[str]:

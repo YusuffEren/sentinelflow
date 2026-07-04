@@ -177,7 +177,7 @@ class TestPEPScreener:
 
         screener = PEPScreener()
 
-        result = screener.screen("Ahmet Politikaci")  # Demo PEP
+        result = screener.screen("Ahmet Politikacı")  # Demo PEP
 
         assert result.has_matches
         assert len(result.matches) > 0
@@ -210,7 +210,7 @@ class TestSanctionsChecker:
 
         checker = SanctionsChecker()
 
-        result = checker.check("Yasak Kisi")  # Demo sanctioned
+        result = checker.check("Yasak Kişi")  # Demo sanctioned
 
         assert result.has_matches
         assert result.risk_score == 100.0  # Sanctions are critical

@@ -26,7 +26,7 @@ import threading
 import time
 from collections import deque
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 import matplotlib.pyplot as plt
@@ -306,7 +306,7 @@ def process_alerts(alerts: list[dict]) -> None:
 
         # Add to alert feed
         dashboard.alerts.appendleft(alert)
-        dashboard.last_update = datetime.utcnow()
+        dashboard.last_update = datetime.now(timezone.utc)
 
 
 # =============================================================================
@@ -613,7 +613,7 @@ def add_demo_alert():
         "receiver_name": random.choice(["Fatma Şahin", "Ali Yıldız", "Zeynep Çelik"]),
         "amount": random.uniform(1000, 50000),
         "description": description,
-        "detected_at": datetime.utcnow().isoformat(),
+        "detected_at": datetime.now(timezone.utc).isoformat(),
         "evidence": (
             {
                 "ring_path": [

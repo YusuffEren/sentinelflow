@@ -29,7 +29,7 @@ try:
     from torch.utils.data import DataLoader, TensorDataset
 
     HAS_TORCH = True
-except ImportError:
+except (ImportError, OSError):
     HAS_TORCH = False
 
 try:

@@ -169,44 +169,28 @@ async def _run_training(n_samples: int, fraud_ratio: float):
     start_time = time.time()
 
     try:
-        from sentinelflow.ml.dataset_loader import FraudDatasetLoader
         from sentinelflow.ml.train_pipeline import TrainPipeline
 
-        _training_status["message"] = "Generating synthetic dataset..."
+        _training_status["message"] = "Starting training pipeline..."
         _training_status["progress"] = 10
 
-        # Generate dataset
-        loader = FraudDatasetLoader()
-        X, y = loader.generate_synthetic_dataset(
+        # pipeline.run() kendi sentetik dataset'ini üretir; ayrıca loader çağırmaya gerek yok
+        pipeline = TrainPipeline(output_dir="models")
+
+        _training_status["progress"] = 30
+        _training_status["message"] = "Training models (IsolationForest + XGBoost + AutoEncoder)..."
+        report = pipeline.run(
             n_samples=n_samples,
             fraud_ratio=fraud_ratio,
         )
 
-        _training_status["message"] = "Training models..."
-        _training_status["progress"] = 30
-
-        # Train pipeline
-        pipeline = TrainPipeline(models_dir="models")
-
-        _training_status["progress"] = 50
-        metrics = pipeline.train_all(X, y)
-
-        _training_status["progress"] = 90
-        _training_status["message"] = "Saving models..."
-
-        pipeline.save_all()
-
         elapsed = time.time() - start_time
-
         _training_status["progress"] = 100
         _training_status["message"] = f"Training completed in {elapsed:.1f}s"
-
         logger.info(f"Training completed: {n_samples} samples, {elapsed:.1f}s")
-
     except Exception as e:
         logger.error(f"Training failed: {e}")
         _training_status["message"] = f"Training failed: {str(e)}"
-
     finally:
         _training_status["is_training"] = False
 

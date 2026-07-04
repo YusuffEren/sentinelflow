@@ -46,7 +46,7 @@ try:
     from torch.utils.data import Dataset, DataLoader
 
     HAS_TORCH = True
-except ImportError:
+except (ImportError, OSError):
     HAS_TORCH = False
     logger.warning("PyTorch not available, temporal model disabled")
 

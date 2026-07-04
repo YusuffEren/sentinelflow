@@ -11,7 +11,7 @@ This module creates realistic fraud scenarios including:
 """
 
 import random
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from typing import Generator
 from uuid import uuid4
@@ -285,7 +285,7 @@ class CircularRingGenerator:
     def generate(self) -> list[Transaction]:
         """Generate a complete circular transaction ring."""
         ring_id = f"RING-{uuid4().hex[:8].upper()}"
-        base_time = datetime.utcnow() - timedelta(minutes=random.randint(0, 60))
+        base_time = datetime.now(timezone.utc) - timedelta(minutes=random.randint(0, 60))
 
         # Create accounts in the ring
         accounts = [generate_account() for _ in range(self.ring_size)]
@@ -363,7 +363,7 @@ class ImpossibleTravelGenerator:
             city2 = random.choice([c for c in TURKISH_CITIES if c.name != city1.name])
         receiver2 = generate_account(city2)
 
-        base_time = datetime.utcnow() - timedelta(minutes=random.randint(0, 30))
+        base_time = datetime.now(timezone.utc) - timedelta(minutes=random.randint(0, 30))
 
         tx1 = Transaction(
             sender_account_id=sender_account_id,
@@ -426,7 +426,7 @@ class BlacklistKeywordGenerator:
             receiver_city=receiver.city,
             amount=Decimal(str(round(random.uniform(*self.amount_range), 2))),
             description=description,
-            timestamp=datetime.utcnow() - timedelta(minutes=random.randint(0, 60)),
+            timestamp=datetime.now(timezone.utc) - timedelta(minutes=random.randint(0, 60)),
             pattern_label="blacklist_keyword",
             fraud_type=FraudType.BLACKLIST_KEYWORD,
         )
@@ -454,7 +454,7 @@ class NormalTransactionGenerator:
             receiver_city=receiver.city,
             amount=Decimal(str(round(random.uniform(*self.amount_range), 2))),
             description=random.choice(NORMAL_DESCRIPTIONS),
-            timestamp=datetime.utcnow()
+            timestamp=datetime.now(timezone.utc)
             - timedelta(minutes=random.randint(0, 120), seconds=random.randint(0, 59)),
             fraud_type=FraudType.NONE,
         )

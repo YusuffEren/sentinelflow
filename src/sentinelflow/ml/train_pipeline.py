@@ -24,7 +24,7 @@ import json
 import sys
 import time
 from dataclasses import dataclass, field, asdict
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -84,7 +84,7 @@ class ModelMetrics:
 class TrainReport:
     """Full training evaluation report."""
 
-    timestamp: str = field(default_factory=lambda: datetime.utcnow().isoformat())
+    timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     dataset_size: int = 0
     train_size: int = 0
     test_size: int = 0

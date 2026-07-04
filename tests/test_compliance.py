@@ -75,7 +75,7 @@ class TestComplianceEngine:
         sanctioned_tx = {
             "transaction_id": "TX-SAN-001",
             "sender_iban": "TR000000000000000000000001",
-            "sender_name": "Yasak Kisi",  # Demo sanctioned
+            "sender_name": "Yasaklı Kişi",  # Demo sanctioned
             "receiver_iban": "TR000000000000000000000002",
             "receiver_name": "Normal",
             "amount": 5000.0,

@@ -91,3 +91,10 @@ data/
 *.json
 !package.json
 *.parquet
+
+# Frontend (Next.js)
+.next/
+.next
+sentinelflow-web/.next/
+node_modules/
+sentinelflow-web/node_modules/

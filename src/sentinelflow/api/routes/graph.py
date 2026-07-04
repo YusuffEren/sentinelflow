@@ -13,7 +13,7 @@ Endpoints:
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, HTTPException, Query
@@ -112,31 +112,32 @@ async def get_graph_data(
         return _generate_mock_graph_data(limit)
     
     try:
-        since = datetime.utcnow() - timedelta(hours=hours)
+        since = datetime.now(timezone.utc) - timedelta(hours=hours)
         
         query = """
-        MATCH (s:Account)-[t:TRANSACTION]->(r:Account)
+        MATCH (s:User)-[t:SENT]->(r:User)
         WHERE t.timestamp > $since
         RETURN s.iban AS sender, r.iban AS receiver,
                s.name AS sender_name, r.name AS receiver_name,
                s.city AS sender_city, r.city AS receiver_city,
                t.amount AS amount, t.timestamp AS timestamp,
-               t.is_fraud AS is_fraud
+               t.fraud_type AS fraud_type
         ORDER BY t.timestamp DESC
         LIMIT $limit
         """
-        
-        with engine._driver.session() as session:
-            result = session.run(query, since=since.isoformat(), limit=limit)
-            records = list(result)
-        
+
+        records = engine.query(
+            cypher=query,
+            params={"since": since.isoformat(), "limit": limit},
+        )
+
         nodes_map: Dict[str, GraphNode] = {}
         edges: List[GraphEdge] = []
-        
+
         for record in records:
             sender_id = record["sender"][:12] + "..."
             receiver_id = record["receiver"][:12] + "..."
-            
+
             if sender_id not in nodes_map:
                 nodes_map[sender_id] = GraphNode(
                     id=sender_id,
@@ -144,7 +145,7 @@ async def get_graph_data(
                     group=2,
                     city=record["sender_city"],
                 )
-            
+
             if receiver_id not in nodes_map:
                 nodes_map[receiver_id] = GraphNode(
                     id=receiver_id,
@@ -152,11 +153,12 @@ async def get_graph_data(
                     group=0,
                     city=record["receiver_city"],
                 )
-            
+
             nodes_map[sender_id].tx_count += 1
             nodes_map[sender_id].amount_total += record["amount"]
-            
-            is_fraud = record["is_fraud"] or False
+
+            # fraud_type "none"/""/None değilse fraud olarak işaretle
+            is_fraud = record.get("fraud_type") not in (None, "none", "")
             
             if is_fraud:
                 nodes_map[sender_id].is_fraud = True
@@ -209,7 +211,7 @@ async def get_fraud_rings(
         return _generate_mock_rings(limit)
     
     try:
-        rings = engine.detect_fraud_rings(min_hops=min_depth, max_hops=max_depth)
+        rings = engine.detect_all_rings(min_hops=min_depth, max_hops=max_depth, limit=limit)
         
         return [
             FraudRing(
@@ -217,7 +219,7 @@ async def get_fraud_rings(
                 accounts=ring["path"],
                 total_amount=ring["total_amount"],
                 transaction_count=ring["transaction_count"],
-                detected_at=datetime.utcnow().isoformat(),
+                detected_at=datetime.now(timezone.utc).isoformat(),
                 severity="critical" if ring["total_amount"] > 100000 else "high",
             )
             for ring in rings[:limit]
@@ -242,8 +244,10 @@ async def get_account_network(
         raise HTTPException(status_code=503, detail="Graph database not available")
     
     try:
+        # SAFETY: `depth` FastAPI Query(ge=1, le=4) ile int olarak doğrulanmıştır.
+        # Neo4j değişken desen derinliğini parametrize etmeyi desteklemediği için f-string gereklidir.
         query = f"""
-        MATCH path = (start:Account {{iban: $iban}})-[:TRANSACTION*1..{depth}]-(connected)
+        MATCH path = (start:User {{iban: $iban}})-[:SENT*1..{depth}]-(connected)
         UNWIND relationships(path) AS rel
         WITH DISTINCT startNode(rel) AS s, endNode(rel) AS r, rel AS t
         RETURN s.iban AS sender, r.iban AS receiver,
@@ -251,10 +255,8 @@ async def get_account_network(
                t.amount AS amount, t.timestamp AS timestamp
         LIMIT 200
         """
-        
-        with engine._driver.session() as session:
-            result = session.run(query, iban=iban)
-            records = list(result)
+
+        records = engine.query(cypher=query, params={"iban": iban})
         
         if not records:
             raise HTTPException(status_code=404, detail=f"Account {iban} not found")
@@ -344,7 +346,7 @@ def _generate_mock_graph_data(limit: int = 100) -> GraphData:
             source=f"ACC{source_idx:04d}",
             target=f"ACC{target_idx:04d}",
             amount=random.uniform(100, 50000),
-            timestamp=datetime.utcnow().isoformat(),
+            timestamp=datetime.now(timezone.utc).isoformat(),
             color="#ef4444" if is_fraud else "#334155",
             is_fraud=is_fraud,
         ))
@@ -375,7 +377,7 @@ def _generate_mock_rings(limit: int = 10) -> List[FraudRing]:
             accounts=accounts,
             total_amount=random.uniform(50000, 500000),
             transaction_count=ring_size,
-            detected_at=datetime.utcnow().isoformat(),
+            detected_at=datetime.now(timezone.utc).isoformat(),
             severity=random.choice(["high", "critical"]),
         ))
     

@@ -27,7 +27,7 @@ try:
     import torch.nn as nn
 
     HAS_TORCH = True
-except ImportError:
+except (ImportError, OSError):
     HAS_TORCH = False
 
 try:

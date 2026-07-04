@@ -7,7 +7,7 @@ Tests for the ML feature engineering, models, and ensemble components.
 
 import numpy as np
 import pytest
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sentinelflow.ml.feature_engine import (
     TransactionFeatureEngine,
@@ -42,7 +42,7 @@ def sample_transaction() -> dict:
         "amount": 1500.0,
         "currency": "TRY",
         "description": "Kira ödemesi",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
 
@@ -205,7 +205,7 @@ class TestTransactionFeatureEngine:
             "description": "",
             "sender_city": "",
             "receiver_city": "",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
         # Process multiple transactions from same sender

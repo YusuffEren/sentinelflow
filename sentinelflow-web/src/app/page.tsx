@@ -1,137 +1,51 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { useWebSocket } from "@/hooks/use-websocket"
-import { Header } from "@/components/layout/header"
-import { StatCard } from "@/components/dashboard/stat-card"
-import { AlertFeed } from "@/components/dashboard/alert-feed"
-import { ThreatMap } from "@/components/dashboard/threat-map"
-import { AiChat } from "@/components/dashboard/ai-chat"
-import { Activity, ShieldAlert, CreditCard, Gauge } from "lucide-react"
-import { config, getApiUrl } from "@/lib/config"
+// =============================================================================
+// SentinelFlow — Landing (ana sayfa)
+// =============================================================================
+// Tek sayfalik, SOC camindan bakiyor hissi veren tanitim sitesi. Her bölüm
+// kendi icinde animator; arka planda ince veri akisi ambiyansi. Tum animasyonlar
+// prefers-reduced-motion ile kapanir. Mevcut canli dashboard /dashboard altinda
+// korunur.
+// =============================================================================
+
+import { useState } from "react"
+import { BootSequence } from "@/components/landing/BootSequence"
+import { Navbar } from "@/components/landing/Navbar"
+import { ParticleField } from "@/components/landing/ParticleField"
+import { Hero } from "@/components/landing/Hero"
+import { Architecture } from "@/components/landing/Architecture"
+import { DetectionEngines } from "@/components/landing/DetectionEngines"
+import { AlertFeedPreview } from "@/components/landing/AlertFeedPreview"
+import { TechStack } from "@/components/landing/TechStack"
+import { PerformanceMetrics } from "@/components/landing/PerformanceMetrics"
+import { GettingStarted } from "@/components/landing/GettingStarted"
+import { CtaFooter } from "@/components/landing/CtaFooter"
 
 export default function Home() {
-  const { isConnected, alerts, reconnect } = useWebSocket()
-
-  // System stats
-  const [stats, setStats] = useState({
-    transactions_processed: 0,
-    fraud_detected: 0,
-    fraud_rate: 0,
-    uptime_seconds: 0
-  })
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  // Fetch stats
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const res = await fetch(getApiUrl(config.endpoints.stats))
-        if (res.ok) {
-          const data = await res.json()
-          setStats(data)
-          setError(null)
-        } else {
-          setError("API not available")
-        }
-      } catch (e) {
-        console.error("Failed to fetch stats", e)
-        setError("Connection error")
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchStats()
-    const interval = setInterval(fetchStats, config.ui.statsRefreshInterval)
-    return () => clearInterval(interval)
-  }, [])
-
-  // Fetch initial alerts
-  const [initialAlerts, setInitialAlerts] = useState<any[]>([])
-
-  useEffect(() => {
-    const fetchInitial = async () => {
-      try {
-        const res = await fetch(getApiUrl(`${config.endpoints.alerts}?page_size=20`))
-        if (res.ok) {
-          const data = await res.json()
-          setInitialAlerts(data.alerts || [])
-        }
-      } catch (e) {
-        console.error("Failed to fetch initial alerts", e)
-      }
-    }
-    fetchInitial()
-  }, [])
-
-  // Combine and dedupe alerts
-  const allAlerts = [...alerts, ...initialAlerts]
-    .filter((a, i, self) => i === self.findIndex((t) => t.alert_id === a.alert_id))
-    .slice(0, 50)
+  const [booted, setBooted] = useState(false)
 
   return (
-    <div className="h-screen flex flex-col bg-[#09090B]">
-      {/* Header */}
-      <Header isConnected={isConnected} />
+    <>
+      <BootSequence onDone={() => setBooted(true)} />
 
-      {/* Main Content */}
-      <main className="flex-1 p-6 overflow-hidden">
-        <div className="h-full flex flex-col gap-6">
-          
-          {/* Stats Row */}
-          <div className="grid grid-cols-4 gap-4">
-            <StatCard
-              title="Transactions"
-              value={stats.transactions_processed > 0 ? stats.transactions_processed : "—"}
-              icon={CreditCard}
-              description={stats.transactions_processed > 0 ? "Processed" : "Awaiting data"}
-              trend={stats.transactions_processed > 0 ? "up" : "neutral"}
-              trendValue={stats.transactions_processed > 0 ? "Live" : undefined}
-              color="emerald"
-            />
-            <StatCard
-              title="Fraud Blocked"
-              value={stats.fraud_detected > 0 ? stats.fraud_detected : "—"}
-              icon={ShieldAlert}
-              description={stats.fraud_detected > 0 ? "Threats neutralized" : "No threats"}
-              trend="neutral"
-              color="red"
-            />
-            <StatCard
-              title="Accuracy"
-              value={stats.transactions_processed > 100 ? `${(99 + Math.random() * 0.9).toFixed(1)}%` : "—"}
-              icon={Gauge}
-              description={stats.transactions_processed > 100 ? "Model confidence" : "Calibrating..."}
-              color="blue"
-            />
-            <StatCard
-              title="Uptime"
-              value={stats.uptime_seconds > 0 ? `${Math.floor(stats.uptime_seconds / 60)}m` : "—"}
-              icon={Activity}
-              description="System health"
-              color="zinc"
-            />
-          </div>
+      {/* Ambient veri akisi arka plani (cok hafif) */}
+      <div className="fixed inset-0 -z-10 pointer-events-none">
+        <ParticleField />
+      </div>
 
-          {/* Main Grid - Map and Alerts */}
-          <div className="flex-1 grid grid-cols-3 gap-4 min-h-0">
-            {/* Map - 2 columns */}
-            <div className="col-span-2 h-full">
-              <ThreatMap alerts={allAlerts} />
-            </div>
+      <Navbar />
 
-            {/* Alert Feed - 1 column */}
-            <div className="col-span-1 h-full">
-              <AlertFeed alerts={allAlerts} />
-            </div>
-          </div>
-
-          {/* AI Chat - Bottom */}
-          <AiChat />
-        </div>
+      <main className={booted ? "" : "opacity-0 transition-opacity duration-500"}>
+        <Hero />
+        <Architecture />
+        <DetectionEngines />
+        <AlertFeedPreview />
+        <TechStack />
+        <PerformanceMetrics />
+        <GettingStarted />
+        <CtaFooter />
       </main>
-    </div>
+    </>
   )
 }

@@ -19,7 +19,7 @@ Note: This is a rule-based chatbot. For production, integrate with:
 from __future__ import annotations
 
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, HTTPException
@@ -47,7 +47,7 @@ class ChatResponse(BaseModel):
     suggestions: List[str] = Field(default_factory=list)
     sources: List[str] = Field(default_factory=list)
     confidence: float = 0.9
-    timestamp: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 
 # =============================================================================

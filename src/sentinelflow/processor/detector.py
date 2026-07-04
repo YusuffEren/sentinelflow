@@ -17,7 +17,7 @@ engines:
    Example: "bahis", "kumar", "crypto" in the description field
 
 Architecture:
-    [Kafka: transactions] → [Detector Service] → [Kafka: fraud_alerts]
+    [Kafka: transactions] → [Detector Service] → [Kafka: alerts]
                                     ↓
                             [Neo4j + Redis]
 
@@ -39,7 +39,7 @@ import sys
 import time
 from collections import deque
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Callable
 from uuid import uuid4
@@ -145,7 +145,7 @@ class FraudAlert:
     related_transactions: list[str] = field(default_factory=list)
 
     # Metadata
-    detected_at: str = field(default_factory=lambda: datetime.utcnow().isoformat())
+    detected_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     detector_version: str = "1.0.0"
 
     def to_dict(self) -> dict:
@@ -187,7 +187,7 @@ class DetectorStats:
 
     @property
     def uptime_seconds(self) -> float:
-        return (datetime.utcnow() - self.start_time).total_seconds()
+        return (datetime.now(timezone.utc) - self.start_time).total_seconds()
 
     @property
     def fraud_rate(self) -> float:
@@ -222,7 +222,7 @@ class FraudDetectorService:
         self,
         kafka_servers: str | None = None,
         kafka_topic_in: str = "transactions",
-        kafka_topic_out: str = "fraud_alerts",
+        kafka_topic_out: str = "alerts",
         consumer_group: str = "sentinelflow-detectors",
     ) -> None:
         """
@@ -504,9 +504,9 @@ class FraudDetectorService:
                 if "T" in timestamp_str:
                     timestamp = datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
                 else:
-                    timestamp = datetime.utcnow()
+                    timestamp = datetime.now(timezone.utc)
             except ValueError:
-                timestamp = datetime.utcnow()
+                timestamp = datetime.now(timezone.utc)
 
             # Check for impossible travel
             is_impossible, details = self._redis_client.check_impossible_travel(
@@ -1045,7 +1045,7 @@ def parse_args() -> argparse.Namespace:
         "--topic-out",
         "-o",
         type=str,
-        default="fraud_alerts",
+        default="alerts",
         help="Output topic for fraud alerts",
     )
 

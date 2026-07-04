@@ -30,7 +30,7 @@ from __future__ import annotations
 import json
 import os
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 import redis
@@ -279,7 +279,7 @@ class RedisGeoClient:
             return
 
         if timestamp is None:
-            timestamp = datetime.utcnow()
+            timestamp = datetime.now(timezone.utc)
 
         location = UserLocation(
             iban=iban,

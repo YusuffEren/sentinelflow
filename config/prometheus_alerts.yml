@@ -1,0 +1,30 @@
+# SentinelFlow Prometheus Alerting Rules
+# Usage: Referenced from prometheus.yml via rule_files
+
+groups:
+  - name: sentinelflow_alerts
+    interval: 30s
+    rules:
+      - alert: HighFraudRate
+        expr: rate(sentinelflow_fraud_detected_total[5m]) / rate(sentinelflow_transactions_processed_total[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High fraud rate detected ({{ $value | humanizePercentage }} of transactions)"
+
+      - alert: APIDown
+        expr: up{job="sentinelflow-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "SentinelFlow API is down"
+
+      - alert: HighErrorRate
+        expr: rate(sentinelflow_errors_total[5m]) > 10
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High error rate in API ({{ $value | humanize }} errors/min)"

@@ -32,7 +32,7 @@ from __future__ import annotations
 
 import os
 from contextlib import contextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Generator, TypedDict
 
 from loguru import logger
@@ -173,6 +173,29 @@ class GraphEngine:
             self._driver = None
             logger.debug("Neo4j connection closed")
 
+    def query(
+        self,
+        cypher: str,
+        params: dict[str, Any] | None = None,
+    ) -> list[dict[str, Any]]:
+        """
+        Read-only Cypher sorgusu çalıştırır ve sonuçları dict listesi olarak döner.
+
+        Güvenli bağlantı yönetimi için _session() context manager'ını kullanır;
+        böylece session her zaman kapatılır ve connection pool sızmaz.
+
+        Args:
+            cypher: Cypher sorgusu (çağıranın read-only olduğunu garanti etmesi beklenir)
+            params: Sorgu parametreleri — Cypher injection önlemek için her zaman
+                parametrize edilmiş sorgu kullanılmalı
+
+        Returns:
+            Her kayıt bir dict olarak liste halinde döner; boş sonuçta []
+        """
+        with self._session() as session:
+            result = session.run(cypher, params or {})
+            return [dict(record) for record in result]
+
     def __enter__(self) -> "GraphEngine":
         return self
 
@@ -309,7 +332,7 @@ class GraphEngine:
             "receiver_city": transaction_data.get("receiver_city", "Unknown"),
             "transaction_id": transaction_data.get("transaction_id", ""),
             "amount": float(transaction_data.get("amount", 0)),
-            "timestamp": transaction_data.get("timestamp", datetime.utcnow().isoformat()),
+            "timestamp": transaction_data.get("timestamp", datetime.now(timezone.utc).isoformat()),
             "description": transaction_data.get("description", ""),
             "fraud_type": transaction_data.get("fraud_type", "none"),
             "ring_id": transaction_data.get("ring_id"),
@@ -369,7 +392,7 @@ class GraphEngine:
                 "receiver_city": tx.get("receiver_city", "Unknown"),
                 "transaction_id": tx.get("transaction_id", ""),
                 "amount": float(tx.get("amount", 0)),
-                "timestamp": tx.get("timestamp", datetime.utcnow().isoformat()),
+                "timestamp": tx.get("timestamp", datetime.now(timezone.utc).isoformat()),
                 "description": tx.get("description", ""),
                 "fraud_type": tx.get("fraud_type", "none"),
                 "ring_id": tx.get("ring_id"),
@@ -479,7 +502,7 @@ class GraphEngine:
                     "path": ibans,
                     "total_amount": record["total_amount"],
                     "transaction_count": record["ring_size"],
-                    "detected_at": datetime.utcnow().isoformat(),
+                    "detected_at": datetime.now(timezone.utc).isoformat(),
                 }
                 detected_rings.append(fraud_ring)
 
@@ -557,7 +580,7 @@ class GraphEngine:
                         "path": ibans,
                         "total_amount": record["total_amount"],
                         "transaction_count": record["ring_size"],
-                        "detected_at": datetime.utcnow().isoformat(),
+                        "detected_at": datetime.now(timezone.utc).isoformat(),
                     }
                     detected_rings.append(fraud_ring)
         except Neo4jError as e:
@@ -604,7 +627,7 @@ class GraphEngine:
                     "path": ibans,
                     "total_amount": record["total_amount"],
                     "transaction_count": record["ring_size"],
-                    "detected_at": datetime.utcnow().isoformat(),
+                    "detected_at": datetime.now(timezone.utc).isoformat(),
                 }
                 detected_rings.append(fraud_ring)
 
