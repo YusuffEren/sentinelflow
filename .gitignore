@@ -98,3 +98,6 @@ data/
 sentinelflow-web/.next/
 node_modules/
 sentinelflow-web/node_modules/
+
+# opencode (agent config/skills - not project code)
+.opencode/
