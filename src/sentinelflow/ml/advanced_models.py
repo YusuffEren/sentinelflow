@@ -17,9 +17,9 @@ from __future__ import annotations
 
 import os
 import pickle
-from pathlib import Path
-from typing import Any, List, Optional, Dict
 from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any
 
 import numpy as np
 from loguru import logger
@@ -55,10 +55,10 @@ except ImportError:
 # =============================================================================
 
 try:
-    from sklearn.preprocessing import StandardScaler, LabelEncoder
-    from sklearn.model_selection import cross_val_predict, StratifiedKFold
-    from sklearn.metrics import roc_auc_score, f1_score, precision_score, recall_score
     from sklearn.calibration import CalibratedClassifierCV
+    from sklearn.metrics import f1_score, precision_score, recall_score, roc_auc_score
+    from sklearn.model_selection import StratifiedKFold, cross_val_predict
+    from sklearn.preprocessing import LabelEncoder, StandardScaler
 
     HAS_SKLEARN = True
 except ImportError:
@@ -70,8 +70,8 @@ except ImportError:
 # =============================================================================
 
 try:
-    from imblearn.over_sampling import SMOTE, ADASYN
     from imblearn.combine import SMOTETomek
+    from imblearn.over_sampling import ADASYN, SMOTE
     from imblearn.under_sampling import TomekLinks
 
     HAS_IMBLEARN = True
@@ -110,7 +110,7 @@ class ModelMetrics:
     auc_pr: float = 0.0
     inference_time_ms: float = 0.0
 
-    def to_dict(self) -> Dict[str, float]:
+    def to_dict(self) -> dict[str, float]:
         return {
             "accuracy": round(self.accuracy, 4),
             "precision": round(self.precision, 4),
@@ -154,7 +154,7 @@ class LightGBMFraudModel(BaseFraudModel):
         reg_lambda: float = 0.1,
         boosting_type: str = "dart",  # gbdt, dart, goss
         class_weight: str = "balanced",
-        categorical_features: List[int] | None = None,
+        categorical_features: list[int] | None = None,
     ) -> None:
         self._n_estimators = n_estimators
         self._max_depth = max_depth
@@ -172,7 +172,7 @@ class LightGBMFraudModel(BaseFraudModel):
         self._model: Any = None
         self._scaler = StandardScaler() if HAS_SKLEARN else None
         self._is_fitted = False
-        self._feature_importance: Dict[str, float] = {}
+        self._feature_importance: dict[str, float] = {}
 
         if model_path and os.path.exists(model_path):
             self.load(model_path)
@@ -188,7 +188,7 @@ class LightGBMFraudModel(BaseFraudModel):
         y: np.ndarray | None = None,
         X_val: np.ndarray | None = None,
         y_val: np.ndarray | None = None,
-        feature_names: List[str] | None = None,
+        feature_names: list[str] | None = None,
     ) -> None:
         """
         LightGBM modelini eğit.
@@ -322,7 +322,7 @@ class LightGBMFraudModel(BaseFraudModel):
         return "LightGBM"
 
     @property
-    def feature_importance(self) -> Dict[str, float]:
+    def feature_importance(self) -> dict[str, float]:
         """Özellik önem sıralaması."""
         return self._feature_importance
 
@@ -354,7 +354,7 @@ class CatBoostFraudModel(BaseFraudModel):
         l2_leaf_reg: float = 3.0,
         border_count: int = 254,
         auto_class_weights: str = "Balanced",
-        cat_features: List[int | str] | None = None,
+        cat_features: list[int | str] | None = None,
         use_gpu: bool = False,
     ) -> None:
         self._iterations = iterations
@@ -368,7 +368,7 @@ class CatBoostFraudModel(BaseFraudModel):
 
         self._model: CatBoostClassifier | None = None
         self._is_fitted = False
-        self._feature_importance: Dict[str, float] = {}
+        self._feature_importance: dict[str, float] = {}
 
         if model_path and os.path.exists(model_path):
             self.load(model_path)
@@ -384,8 +384,8 @@ class CatBoostFraudModel(BaseFraudModel):
         y: np.ndarray | None = None,
         X_val: np.ndarray | None = None,
         y_val: np.ndarray | None = None,
-        feature_names: List[str] | None = None,
-        cat_features: List[int] | None = None,
+        feature_names: list[str] | None = None,
+        cat_features: list[int] | None = None,
     ) -> None:
         """
         CatBoost modelini eğit.
@@ -499,7 +499,7 @@ class CatBoostFraudModel(BaseFraudModel):
         return "CatBoost"
 
     @property
-    def feature_importance(self) -> Dict[str, float]:
+    def feature_importance(self) -> dict[str, float]:
         return self._feature_importance
 
 
@@ -570,10 +570,10 @@ class StackingPrediction:
     is_fraud: bool = False
     final_score: float = 0.0
     meta_score: float = 0.0
-    base_scores: Dict[str, float] = field(default_factory=dict)
+    base_scores: dict[str, float] = field(default_factory=dict)
     confidence: float = 0.0
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "is_fraud": self.is_fraud,
             "final_score": round(self.final_score, 4),
@@ -609,7 +609,7 @@ class StackingEnsemble:
         self._cv_folds = cv_folds
         self._calibrate = calibrate
 
-        self._base_models: List[tuple[str, BaseFraudModel, float]] = []
+        self._base_models: list[tuple[str, BaseFraudModel, float]] = []
         self._meta_learner: Any = None
         self._meta_scaler = StandardScaler() if HAS_SKLEARN else None
         self._is_fitted = False
@@ -639,8 +639,8 @@ class StackingEnsemble:
         self,
         X: np.ndarray,
         y: np.ndarray,
-        feature_names: List[str] | None = None,
-    ) -> Dict[str, Any]:
+        feature_names: list[str] | None = None,
+    ) -> dict[str, Any]:
         """
         Stacking ensemble'ı eğit.
 
@@ -680,9 +680,9 @@ class StackingEnsemble:
 
             cv_predictions = np.zeros(n_samples)
 
-            for fold, (train_idx, val_idx) in enumerate(skf.split(X, y)):
+            for _fold, (train_idx, val_idx) in enumerate(skf.split(X, y)):
                 X_train, X_val = X[train_idx], X[val_idx]
-                y_train, y_val = y[train_idx], y[val_idx]
+                y_train, _y_val = y[train_idx], y[val_idx]
 
                 # Model'i eğit
                 model.fit(X_train, y_train)
@@ -795,7 +795,7 @@ class StackingEnsemble:
 
         return result
 
-    def predict_batch(self, X: np.ndarray) -> List[StackingPrediction]:
+    def predict_batch(self, X: np.ndarray) -> list[StackingPrediction]:
         """Batch tahmin."""
         return [self.predict(X[i]) for i in range(len(X))]
 
@@ -809,7 +809,7 @@ class StackingEnsemble:
         n_models = len(self._base_models)
         meta_features = np.zeros((n_samples, n_models))
 
-        for i, (name, model, weight) in enumerate(self._base_models):
+        for i, (_name, model, weight) in enumerate(self._base_models):
             if model.is_ready:
                 preds = model.predict_proba(X)
                 meta_features[:, i] = preds * weight
@@ -974,9 +974,9 @@ def create_competition_ensemble(
         Yapılandırılmış StackingEnsemble
     """
     from sentinelflow.ml.models import (
+        AutoEncoderModel,
         IsolationForestModel,
         XGBoostFraudModel,
-        AutoEncoderModel,
     )
 
     ensemble = StackingEnsemble(

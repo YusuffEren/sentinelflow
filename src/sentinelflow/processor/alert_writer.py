@@ -20,7 +20,6 @@ from __future__ import annotations
 import json
 import os
 import time
-from datetime import datetime, timezone
 from typing import Any, Callable
 
 from loguru import logger
@@ -30,7 +29,6 @@ from sentinelflow.contracts import (
     AlertCreate,
     FraudType,
     Severity,
-    EventType,
 )
 from sentinelflow.contracts.alert import Evidence
 

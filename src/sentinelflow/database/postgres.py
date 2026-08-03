@@ -10,14 +10,14 @@ Uses SQLAlchemy 2.0 with both sync and async support.
 from __future__ import annotations
 
 import os
-from contextlib import contextmanager, asynccontextmanager
-from typing import Generator, AsyncGenerator
+from collections.abc import AsyncGenerator, Generator
+from contextlib import asynccontextmanager, contextmanager
 
-from sqlalchemy import create_engine, event
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
-from sqlalchemy.orm import sessionmaker, Session
-from sqlalchemy.pool import QueuePool
 from loguru import logger
+from sqlalchemy import create_engine
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.pool import QueuePool
 
 
 def get_database_url(async_driver: bool = False) -> str:

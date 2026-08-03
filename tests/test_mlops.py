@@ -7,10 +7,11 @@ Tests for MLOps: ModelCard, DriftDetector, ExperimentTracker, ModelRegistry.
 Run with: pytest tests/test_mlops.py -v
 """
 
-import sys, os, json
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
+import json
+import os
+import sys
 
-import pytest
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 
 class TestModelCard:
@@ -18,6 +19,7 @@ class TestModelCard:
 
     def test_create_minimal(self):
         from sentinelflow.mlops import ModelCard
+
         card = ModelCard(
             model_name="IsolationForest",
             model_version="1.0.0",
@@ -28,12 +30,16 @@ class TestModelCard:
 
     def test_to_dict(self):
         from sentinelflow.mlops import ModelCard
-        card = ModelCard(model_name="XGBoost", model_version="2.0.0", model_type="Classifier", description="GBM")
+
+        card = ModelCard(
+            model_name="XGBoost", model_version="2.0.0", model_type="Classifier", description="GBM"
+        )
         d = card.to_dict()
         assert isinstance(d, dict)
 
     def test_to_json(self):
         from sentinelflow.mlops import ModelCard
+
         card = ModelCard(model_name="Test", model_version="1.0", model_type="T", description="Test")
         json_str = card.to_json()
         data = json.loads(json_str)
@@ -41,7 +47,10 @@ class TestModelCard:
 
     def test_to_markdown(self):
         from sentinelflow.mlops import ModelCard
-        card = ModelCard(model_name="TestModel", model_version="1.0", model_type="T", description="A test model")
+
+        card = ModelCard(
+            model_name="TestModel", model_version="1.0", model_type="T", description="A test model"
+        )
         md = card.to_markdown()
         assert "TestModel" in md
 
@@ -51,11 +60,13 @@ class TestDriftDetector:
 
     def test_initialization(self):
         from sentinelflow.mlops import DriftDetector
+
         dd = DriftDetector()
         assert dd is not None
 
     def test_detect_model_drift(self):
         from sentinelflow.mlops import DriftDetector
+
         dd = DriftDetector()
         report = dd.detect_model_drift(
             reference_metrics={"accuracy": 0.95, "f1": 0.93},
@@ -65,6 +76,7 @@ class TestDriftDetector:
 
     def test_no_drift_when_same(self):
         from sentinelflow.mlops import DriftDetector
+
         dd = DriftDetector()
         report = dd.detect_model_drift(
             reference_metrics={"accuracy": 0.95},
@@ -78,13 +90,19 @@ class TestExperimentTracker:
 
     def test_create_experiment(self):
         from sentinelflow.mlops import ExperimentTracker
-        et = ExperimentTracker(tracking_path=os.path.join(os.path.dirname(__file__), "..", "mlops_test", "experiments"))
-        exp = et.create_experiment(name="test-exp", description="Test", tags={"framework": "pytest"})
+
+        et = ExperimentTracker(
+            tracking_path=os.path.join(os.path.dirname(__file__), "..", "mlops_test", "experiments")
+        )
+        exp = et.create_experiment(
+            name="test-exp", description="Test", tags={"framework": "pytest"}
+        )
         assert exp.name == "test-exp"
         assert exp.experiment_id is not None
 
     def test_start_and_log(self):
         from sentinelflow.mlops import ExperimentTracker
+
         path = os.path.join(os.path.dirname(__file__), "..", "mlops_test", "exps")
         et = ExperimentTracker(tracking_path=path)
         et.create_experiment("test-exp")
@@ -97,6 +115,7 @@ class TestExperimentTracker:
 
     def test_list_runs(self):
         from sentinelflow.mlops import ExperimentTracker
+
         path = os.path.join(os.path.dirname(__file__), "..", "mlops_test", "list2")
         et = ExperimentTracker(tracking_path=path)
         et.create_experiment("multi-run")
@@ -113,13 +132,16 @@ class TestModelRegistry:
 
     def test_initialization(self):
         from sentinelflow.mlops import ModelRegistry
-        mr = ModelRegistry(registry_path=os.path.join(os.path.dirname(__file__), "..", "mlops_test", "registry"))
+
+        mr = ModelRegistry(
+            registry_path=os.path.join(os.path.dirname(__file__), "..", "mlops_test", "registry")
+        )
         assert mr is not None
 
     def test_register_and_list(self):
-        from sentinelflow.mlops import ModelRegistry
-        import numpy as np
         from sklearn.ensemble import IsolationForest
+
+        from sentinelflow.mlops import ModelRegistry
 
         path = os.path.join(os.path.dirname(__file__), "..", "mlops_test", "reg")
         mr = ModelRegistry(registry_path=path)

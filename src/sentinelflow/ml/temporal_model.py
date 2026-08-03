@@ -27,12 +27,12 @@ Usage:
 
 from __future__ import annotations
 
+import math
 import os
 from collections import deque
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Optional
-import math
+from typing import Any
 
 import numpy as np
 from loguru import logger
@@ -43,7 +43,7 @@ try:
     import torch.nn.functional as F
     from torch.optim import Adam
     from torch.optim.lr_scheduler import ReduceLROnPlateau
-    from torch.utils.data import Dataset, DataLoader
+    from torch.utils.data import DataLoader, Dataset
 
     HAS_TORCH = True
 except (ImportError, OSError):
@@ -702,7 +702,7 @@ class TemporalFraudModel:
         # Class weights
         pos_count = sum(labels)
         neg_count = len(labels) - pos_count
-        pos_weight = torch.tensor([neg_count / (pos_count + 1e-6)]).to(self._device)
+        torch.tensor([neg_count / (pos_count + 1e-6)]).to(self._device)
         criterion = nn.BCELoss()
 
         history = {"train_loss": [], "val_loss": [], "val_auc": []}
@@ -960,7 +960,7 @@ def generate_synthetic_sequences(
     sequences = []
     labels = []
 
-    for i in range(num_sequences):
+    for _i in range(num_sequences):
         seq_len = np.random.randint(seq_len_range[0], seq_len_range[1] + 1)
 
         # Generate sequence

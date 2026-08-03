@@ -21,28 +21,28 @@ from __future__ import annotations
 
 import asyncio
 import time
-from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 from uuid import uuid4
 
 import numpy as np
-from fastapi import APIRouter, HTTPException, BackgroundTasks
-from pydantic import BaseModel, Field
+from fastapi import APIRouter
 from loguru import logger
+from pydantic import BaseModel, Field
+
+from sentinelflow.ml.advanced_features import ADVANCED_FEATURE_NAMES, AdvancedFeatureEngine
 
 # Feature engines
-from sentinelflow.ml.feature_engine import TransactionFeatureEngine, FEATURE_NAMES
-from sentinelflow.ml.advanced_features import AdvancedFeatureEngine, ADVANCED_FEATURE_NAMES
+from sentinelflow.ml.feature_engine import FEATURE_NAMES, TransactionFeatureEngine
 
 # Models
-from sentinelflow.ml.models import IsolationForestModel, XGBoostFraudModel, AutoEncoderModel
+from sentinelflow.ml.models import AutoEncoderModel, IsolationForestModel, XGBoostFraudModel
 
 try:
     from sentinelflow.ml.advanced_models import (
-        LightGBMFraudModel,
         CatBoostFraudModel,
+        LightGBMFraudModel,
         StackingEnsemble,
         create_competition_ensemble,
     )
@@ -53,7 +53,7 @@ except ImportError:
     logger.warning("Advanced models not available")
 
 try:
-    from sentinelflow.ml.graph_features import GraphFeatureEngine, GRAPH_FEATURE_NAMES
+    from sentinelflow.ml.graph_features import GRAPH_FEATURE_NAMES, GraphFeatureEngine
 
     HAS_GRAPH_FEATURES = True
 except ImportError:
@@ -92,7 +92,7 @@ class RiskLevel(str, Enum):
 class RiskScoringRequest(BaseModel):
     """Risk skorlama isteği."""
 
-    transaction_id: Optional[str] = Field(None, description="İşlem ID")
+    transaction_id: str | None = Field(None, description="İşlem ID")
     sender_iban: str = Field(..., description="Gönderen IBAN")
     sender_name: str = Field(..., description="Gönderen adı")
     sender_city: str = Field("İstanbul", description="Gönderen şehir")
@@ -102,9 +102,9 @@ class RiskScoringRequest(BaseModel):
     amount: float = Field(..., gt=0, description="Tutar (TL)")
     currency: str = Field("TRY", description="Para birimi")
     description: str = Field("", description="Açıklama")
-    timestamp: Optional[str] = Field(None, description="ISO 8601 timestamp")
+    timestamp: str | None = Field(None, description="ISO 8601 timestamp")
     channel: str = Field("mobile", description="Kanal (mobile, web, atm)")
-    device_id: Optional[str] = Field(None, description="Cihaz ID")
+    device_id: str | None = Field(None, description="Cihaz ID")
 
     class Config:
         json_schema_extra = {
@@ -129,7 +129,7 @@ class RiskFactor(BaseModel):
     impact: float = Field(..., description="Risk etkisi (-1 to 1)")
     direction: str = Field(..., description="increases_risk / decreases_risk")
     explanation: str = Field(..., description="Türkçe açıklama")
-    value: Optional[float] = Field(None, description="Özellik değeri")
+    value: float | None = Field(None, description="Özellik değeri")
 
 
 class SimilarCase(BaseModel):
@@ -161,15 +161,15 @@ class RiskScoringResponse(BaseModel):
     latency_ms: float = Field(..., description="İşlem süresi (ms)")
 
     # Model detayları
-    model_scores: Dict[str, float] = Field(default_factory=dict)
+    model_scores: dict[str, float] = Field(default_factory=dict)
     ensemble_method: str = Field("stacking", description="Ensemble yöntemi")
 
     # Açıklanabilirlik
-    top_risk_factors: List[RiskFactor] = Field(default_factory=list)
+    top_risk_factors: list[RiskFactor] = Field(default_factory=list)
     explanation_summary: str = Field("", description="Özet açıklama")
 
     # Ek bilgiler
-    similar_cases: List[SimilarCase] = Field(default_factory=list)
+    similar_cases: list[SimilarCase] = Field(default_factory=list)
     recommended_action: str = Field("", description="Önerilen aksiyon")
 
     # Feature sayıları
@@ -198,7 +198,7 @@ class RiskScoringResponse(BaseModel):
 class BatchRiskRequest(BaseModel):
     """Toplu risk skorlama isteği."""
 
-    transactions: List[RiskScoringRequest]
+    transactions: list[RiskScoringRequest]
     parallel: bool = Field(True, description="Paralel işleme")
 
 
@@ -209,7 +209,7 @@ class BatchRiskResponse(BaseModel):
     processed: int
     avg_latency_ms: float
     high_risk_count: int
-    results: List[RiskScoringResponse]
+    results: list[RiskScoringResponse]
 
 
 # =============================================================================
@@ -236,7 +236,7 @@ class RiskScoringEngine:
         self._advanced_feature_engine = AdvancedFeatureEngine()
 
         # Graph feature engine (if Neo4j available)
-        self._graph_engine: Optional[GraphFeatureEngine] = None
+        self._graph_engine: GraphFeatureEngine | None = None
 
         # Models
         self._if_model = IsolationForestModel(contamination=0.05, n_estimators=200)
@@ -244,9 +244,9 @@ class RiskScoringEngine:
         self._ae_model = AutoEncoderModel()
 
         # Advanced models (if available)
-        self._lgbm_model: Optional[LightGBMFraudModel] = None
-        self._catboost_model: Optional[CatBoostFraudModel] = None
-        self._stacking_ensemble: Optional[StackingEnsemble] = None
+        self._lgbm_model: LightGBMFraudModel | None = None
+        self._catboost_model: CatBoostFraudModel | None = None
+        self._stacking_ensemble: StackingEnsemble | None = None
 
         if HAS_ADVANCED_MODELS:
             self._lgbm_model = LightGBMFraudModel()
@@ -348,7 +348,7 @@ class RiskScoringEngine:
         # STEP 2: Model Predictions
         # =================================================================
 
-        model_scores: Dict[str, float] = {}
+        model_scores: dict[str, float] = {}
 
         # Base models (use base features)
         if self._if_model.is_ready:
@@ -381,10 +381,9 @@ class RiskScoringEngine:
                 "AutoEncoder": 0.15,
             }
 
-            total_weight = sum(weights.get(k, 0.1) for k in model_scores.keys())
+            total_weight = sum(weights.get(k, 0.1) for k in model_scores)
             risk_score = (
-                sum(model_scores[k] * weights.get(k, 0.1) for k in model_scores.keys())
-                / total_weight
+                sum(model_scores[k] * weights.get(k, 0.1) for k in model_scores) / total_weight
             )
         else:
             # Fallback: use behavioral features directly
@@ -453,7 +452,7 @@ class RiskScoringEngine:
 
     async def score_batch(
         self,
-        transactions: List[RiskScoringRequest],
+        transactions: list[RiskScoringRequest],
         parallel: bool = True,
     ) -> BatchRiskResponse:
         """
@@ -494,9 +493,9 @@ class RiskScoringEngine:
 
     def _generate_risk_factors(
         self,
-        features: Dict[str, float],
+        features: dict[str, float],
         risk_score: float,
-    ) -> List[RiskFactor]:
+    ) -> list[RiskFactor]:
         """Generate top risk factors with explanations."""
         factors = []
 
@@ -537,7 +536,7 @@ class RiskScoringEngine:
 
     def _generate_summary(
         self,
-        factors: List[RiskFactor],
+        factors: list[RiskFactor],
         risk_score: float,
     ) -> str:
         """Generate Turkish explanation summary."""
@@ -597,7 +596,7 @@ class RiskScoringEngine:
 router = APIRouter(prefix="/api/v1/risk", tags=["Risk Scoring"])
 
 # Global engine instance
-_engine: Optional[RiskScoringEngine] = None
+_engine: RiskScoringEngine | None = None
 
 
 def get_engine() -> RiskScoringEngine:
@@ -646,7 +645,7 @@ async def score_batch(request: BatchRiskRequest) -> BatchRiskResponse:
     "/stats",
     summary="Risk scoring statistics",
 )
-async def get_stats() -> Dict[str, Any]:
+async def get_stats() -> dict[str, Any]:
     """Get risk scoring engine statistics."""
     engine = get_engine()
     return {
@@ -661,7 +660,7 @@ async def get_stats() -> Dict[str, Any]:
     "/features",
     summary="List available features",
 )
-async def list_features() -> Dict[str, Any]:
+async def list_features() -> dict[str, Any]:
     """List all available features and their descriptions."""
     engine = get_engine()
     return {

@@ -1,6 +1,5 @@
 # SentinelFlow - Federated Learning Tests
 
-import pytest
 import numpy as np
 
 
@@ -61,7 +60,7 @@ class TestFederatedServer:
 
     def test_server_register_client(self, ml_feature_batch, ml_labels):
         """Test registering clients."""
-        from sentinelflow.ml.federated import FederatedServer, FederatedClient
+        from sentinelflow.ml.federated import FederatedClient, FederatedServer
 
         server = FederatedServer()
         client = FederatedClient("c1", "Bank A")
@@ -73,7 +72,7 @@ class TestFederatedServer:
 
     def test_server_train_round(self, ml_feature_batch, ml_labels):
         """Test single training round."""
-        from sentinelflow.ml.federated import FederatedServer, FederatedClient
+        from sentinelflow.ml.federated import FederatedClient, FederatedServer
 
         server = FederatedServer()
 

@@ -19,12 +19,12 @@ from sentinelflow.generator.models import (
     TransactionStatus,
 )
 from sentinelflow.generator.patterns import (
+    TURKISH_CITIES,
     BlacklistKeywordGenerator,
     CircularRingGenerator,
     FraudPatternMixer,
     ImpossibleTravelGenerator,
     NormalTransactionGenerator,
-    TURKISH_CITIES,
 )
 
 __all__ = [

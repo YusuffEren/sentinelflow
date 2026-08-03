@@ -18,18 +18,17 @@ user information, and full details for regulatory review.
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import json
-import os
+import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
-from typing import Any, Generator
-import uuid
+from typing import Any
 
 from loguru import logger
-
 
 # =============================================================================
 # Enums
@@ -215,7 +214,7 @@ class AuditLogger:
 
         if chain_file.exists():
             try:
-                with open(chain_file, "r", encoding="utf-8") as f:
+                with open(chain_file, encoding="utf-8") as f:
                     state = json.load(f)
                     self._last_hash = state.get("last_hash", "GENESIS")
                     self._event_count = state.get("event_count", 0)
@@ -572,12 +571,10 @@ class AuditLogger:
                 for day_dir in sorted(month_dir.iterdir()):
                     log_file = day_dir / "audit.jsonl"
                     if log_file.exists():
-                        with open(log_file, "r", encoding="utf-8") as f:
+                        with open(log_file, encoding="utf-8") as f:
                             for line in f:
-                                try:
+                                with contextlib.suppress(BaseException):
                                     events.append(json.loads(line))
-                                except:
-                                    pass
 
             # Next month
             month += 1

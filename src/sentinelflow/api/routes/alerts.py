@@ -8,18 +8,14 @@ Alert endpoints - read alerts from PostgreSQL.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any
 
-from fastapi import APIRouter, HTTPException, Query, Depends
-from loguru import logger
+from fastapi import APIRouter, Depends, HTTPException, Query
 
+from sentinelflow.api.deps import get_db_session
 from sentinelflow.api.schemas import (
     Alert,
     AlertListResponse,
-    FraudType,
-    Severity,
 )
-from sentinelflow.api.deps import get_db_session
 
 router = APIRouter(prefix="/alerts", tags=["Alerts"])
 
@@ -152,7 +148,6 @@ async def link_alert_to_case(
 ):
     """Link an alert to a case."""
     from sentinelflow.repository import AlertRepository, EventRepository
-    from sentinelflow.contracts import EventType
 
     alert_repo = AlertRepository(session)
     event_repo = EventRepository(session)

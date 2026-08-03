@@ -21,13 +21,11 @@ Features:
 from __future__ import annotations
 
 import json
-import os
 import time
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
-import warnings
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -36,17 +34,17 @@ from loguru import logger
 try:
     from sklearn.metrics import (
         accuracy_score,
+        average_precision_score,
+        classification_report,
+        confusion_matrix,
+        f1_score,
+        precision_recall_curve,
         precision_score,
         recall_score,
-        f1_score,
         roc_auc_score,
-        average_precision_score,
-        confusion_matrix,
-        classification_report,
-        precision_recall_curve,
         roc_curve,
     )
-    from sklearn.model_selection import cross_val_predict, StratifiedKFold
+    from sklearn.model_selection import StratifiedKFold, cross_val_predict
 
     HAS_SKLEARN = True
 except ImportError:
@@ -104,7 +102,7 @@ class ModelMetrics:
     # Optimal threshold
     optimal_threshold: float = 0.5
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
     def summary(self) -> str:
@@ -129,7 +127,7 @@ class BenchmarkReport:
     num_features: int = 0
 
     # Model results
-    model_metrics: List[ModelMetrics] = field(default_factory=list)
+    model_metrics: list[ModelMetrics] = field(default_factory=list)
     best_model: str = ""
     best_f1: float = 0.0
     best_auc: float = 0.0
@@ -139,12 +137,12 @@ class BenchmarkReport:
     improvement_over_baseline: float = 0.0
 
     # Statistical tests
-    statistical_significance: Dict[str, Any] = field(default_factory=dict)
+    statistical_significance: dict[str, Any] = field(default_factory=dict)
 
     # Execution info
     total_time_seconds: float = 0.0
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "timestamp": self.timestamp,
             "dataset_name": self.dataset_name,
@@ -208,8 +206,8 @@ class BenchmarkEngine:
         self._cv_folds = cv_folds
         self._n_bootstrap = n_bootstrap
 
-        self._models: Dict[str, Any] = {}
-        self._feature_names: List[str] = []
+        self._models: dict[str, Any] = {}
+        self._feature_names: list[str] = []
 
         logger.info(f"BenchmarkEngine initialized (baseline={baseline_accuracy})")
 
@@ -227,9 +225,9 @@ class BenchmarkEngine:
         self,
         X_test: np.ndarray,
         y_test: np.ndarray,
-        X_train: Optional[np.ndarray] = None,
-        y_train: Optional[np.ndarray] = None,
-        feature_names: Optional[List[str]] = None,
+        X_train: np.ndarray | None = None,
+        y_train: np.ndarray | None = None,
+        feature_names: list[str] | None = None,
         dataset_name: str = "test",
     ) -> BenchmarkReport:
         """
@@ -260,7 +258,7 @@ class BenchmarkEngine:
 
         logger.info(f"Running benchmark on {len(X_test)} samples...")
 
-        all_predictions: Dict[str, np.ndarray] = {}
+        all_predictions: dict[str, np.ndarray] = {}
 
         for name, model_info in self._models.items():
             model = model_info["model"]
@@ -397,7 +395,7 @@ class BenchmarkEngine:
         model: Any,
         X: np.ndarray,
         y: np.ndarray,
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         """Run cross-validation."""
         if not HAS_SKLEARN:
             return {}
@@ -442,9 +440,9 @@ class BenchmarkEngine:
 
     def _statistical_tests(
         self,
-        predictions: Dict[str, np.ndarray],
+        predictions: dict[str, np.ndarray],
         y_true: np.ndarray,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Run statistical significance tests."""
         results = {}
 
@@ -584,7 +582,7 @@ class BenchmarkEngine:
         elif report.improvement_over_baseline < 0:
             print(f"\n⚠️  GAP: {abs(report.improvement_over_baseline):.2f}% behind baseline")
         else:
-            print(f"\n🔄 MATCHED baseline accuracy")
+            print("\n🔄 MATCHED baseline accuracy")
 
         print("\n" + "-" * 70)
         print(f"⏱️  Total Benchmark Time: {report.total_time_seconds:.1f} seconds")

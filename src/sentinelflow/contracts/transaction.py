@@ -8,15 +8,14 @@ Transaction schema definitions.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any
 
 from pydantic import Field, field_validator
 
 from sentinelflow.contracts.base import (
     ContractBase,
     KafkaMessageBase,
-    utc_now,
     generate_id,
+    utc_now,
 )
 
 
@@ -108,7 +107,7 @@ class TransactionCreate(ContractBase):
     device_id: str | None = Field(default=None, max_length=100)
     channel: str = Field(default="web", description="Transaction channel: web, mobile, atm, branch")
 
-    def with_defaults(self) -> "TransactionCreate":
+    def with_defaults(self) -> TransactionCreate:
         """Return a copy with auto-generated defaults filled in."""
         data = self.model_dump()
         if not data.get("transaction_id"):

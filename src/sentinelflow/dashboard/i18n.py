@@ -17,13 +17,13 @@ Usage:
 
 from __future__ import annotations
 
-from typing import Dict, Any
+import contextlib
 
 # =============================================================================
 # Translation Dictionaries
 # =============================================================================
 
-TRANSLATIONS: Dict[str, Dict[str, str]] = {
+TRANSLATIONS: dict[str, dict[str, str]] = {
     "tr": {
         # Dashboard
         "dashboard_title": "SentinelFlow",
@@ -190,7 +190,7 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
 # =============================================================================
 
 
-def get_translations(lang: str = "tr") -> Dict[str, str]:
+def get_translations(lang: str = "tr") -> dict[str, str]:
     """
     Get translations for a language.
 
@@ -219,10 +219,8 @@ def t(key: str, lang: str = "tr", **kwargs) -> str:
     text = translations.get(key, key)
 
     if kwargs:
-        try:
+        with contextlib.suppress(KeyError):
             text = text.format(**kwargs)
-        except KeyError:
-            pass
 
     return text
 

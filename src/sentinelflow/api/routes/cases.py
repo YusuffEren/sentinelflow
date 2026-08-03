@@ -7,19 +7,15 @@ Case management endpoints.
 
 from __future__ import annotations
 
-from typing import Any
+from fastapi import APIRouter, Depends, HTTPException, Query
 
-from fastapi import APIRouter, HTTPException, Query, Depends
-from loguru import logger
-
+from sentinelflow.api.deps import get_db_session
 from sentinelflow.api.schemas import (
     Case,
     CaseCreate,
-    CaseUpdate,
     CaseListResponse,
-    CaseEvent,
+    CaseUpdate,
 )
-from sentinelflow.api.deps import get_db_session
 
 router = APIRouter(prefix="/cases", tags=["Cases"])
 
@@ -88,7 +84,6 @@ async def create_case(
 ):
     """Create a new case."""
     from sentinelflow.repository import CaseRepository, EventRepository
-    from sentinelflow.contracts import EventType
 
     case_repo = CaseRepository(session)
     event_repo = EventRepository(session)
@@ -148,7 +143,7 @@ async def update_case(
     # Update status if changed
     if update_data.status and update_data.status != current.status:
         old_status = current.status
-        case = case_repo.update_status(
+        case_repo.update_status(
             case_id,
             update_data.status,
             resolution=update_data.resolution,
@@ -158,7 +153,7 @@ async def update_case(
     # Update assignment if changed
     if update_data.assigned_to is not None:
         old_assignee = current.assigned_to
-        case = case_repo.assign(case_id, update_data.assigned_to, update_data.assigned_team)
+        case_repo.assign(case_id, update_data.assigned_to, update_data.assigned_team)
         event_repo.log_assignment(case_id, old_assignee, update_data.assigned_to)
 
     # Add note if provided

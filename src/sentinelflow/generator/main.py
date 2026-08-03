@@ -16,6 +16,7 @@ Usage:
 
 import argparse
 import json
+import os
 import random
 import signal
 import sys
@@ -25,10 +26,9 @@ from decimal import Decimal
 from typing import Any
 from uuid import uuid4
 
-from confluent_kafka import Producer, KafkaError, KafkaException
+from confluent_kafka import KafkaError, KafkaException, Producer
 from loguru import logger
 from rich.console import Console
-import os
 
 # Windows compatibility: disable rich formatting if needed
 WINDOWS_SAFE = os.name == "nt"
@@ -39,7 +39,6 @@ from rich.table import Table
 from sentinelflow.config import get_settings
 from sentinelflow.generator.models import FraudType, Transaction
 from sentinelflow.generator.patterns import FraudPatternMixer
-
 
 # =============================================================================
 # Kafka Producer Setup

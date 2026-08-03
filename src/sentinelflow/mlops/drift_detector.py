@@ -43,13 +43,12 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable
 
 import numpy as np
 import pandas as pd
-from scipy import stats
 from loguru import logger
-
+from scipy import stats
 
 # =============================================================================
 # Enums
@@ -101,7 +100,7 @@ class FeatureDriftResult:
     # PSI buckets
     psi_value: float = 0.0
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "feature_name": self.feature_name,
             "drift_detected": self.drift_detected,
@@ -128,8 +127,8 @@ class DataDriftReport:
 
     # Feature-level
     total_features: int = 0
-    drifted_features: List[str] = field(default_factory=list)
-    feature_results: Dict[str, FeatureDriftResult] = field(default_factory=dict)
+    drifted_features: list[str] = field(default_factory=list)
+    feature_results: dict[str, FeatureDriftResult] = field(default_factory=dict)
 
     # Stats
     drift_percentage: float = 0.0
@@ -138,9 +137,9 @@ class DataDriftReport:
     drift_threshold: float = 0.05
 
     # Recommendations
-    recommendations: List[str] = field(default_factory=list)
+    recommendations: list[str] = field(default_factory=list)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "report_id": self.report_id,
             "timestamp": self.timestamp,
@@ -174,20 +173,20 @@ class ModelDriftReport:
     severity: DriftSeverity = DriftSeverity.NONE
 
     # Metrics comparison
-    reference_metrics: Dict[str, float] = field(default_factory=dict)
-    current_metrics: Dict[str, float] = field(default_factory=dict)
-    metric_changes: Dict[str, float] = field(default_factory=dict)
+    reference_metrics: dict[str, float] = field(default_factory=dict)
+    current_metrics: dict[str, float] = field(default_factory=dict)
+    metric_changes: dict[str, float] = field(default_factory=dict)
 
     # Drifted metrics
-    drifted_metrics: List[str] = field(default_factory=list)
+    drifted_metrics: list[str] = field(default_factory=list)
 
     # Thresholds
-    drift_thresholds: Dict[str, float] = field(default_factory=dict)
+    drift_thresholds: dict[str, float] = field(default_factory=dict)
 
     # Recommendations
-    recommendations: List[str] = field(default_factory=list)
+    recommendations: list[str] = field(default_factory=list)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "report_id": self.report_id,
             "timestamp": self.timestamp,
@@ -244,7 +243,7 @@ class DriftDetector:
         self._storage_path = Path(storage_path)
 
         # Alerting callbacks
-        self._alert_callbacks: List[Callable[[Union[DataDriftReport, ModelDriftReport]], None]] = []
+        self._alert_callbacks: list[Callable[[DataDriftReport | ModelDriftReport], None]] = []
 
         # Initialize storage
         self._storage_path.mkdir(parents=True, exist_ok=True)
@@ -253,12 +252,12 @@ class DriftDetector:
 
     def add_alert_callback(
         self,
-        callback: Callable[[Union[DataDriftReport, ModelDriftReport]], None],
+        callback: Callable[[DataDriftReport | ModelDriftReport], None],
     ) -> None:
         """Add a callback for drift alerts."""
         self._alert_callbacks.append(callback)
 
-    def _trigger_alerts(self, report: Union[DataDriftReport, ModelDriftReport]) -> None:
+    def _trigger_alerts(self, report: DataDriftReport | ModelDriftReport) -> None:
         """Trigger alert callbacks."""
         for callback in self._alert_callbacks:
             try:
@@ -304,7 +303,7 @@ class DriftDetector:
         self,
         reference: np.ndarray,
         current: np.ndarray,
-    ) -> Tuple[float, float]:
+    ) -> tuple[float, float]:
         """Kolmogorov-Smirnov test for numerical features."""
         statistic, p_value = stats.ks_2samp(reference, current)
         return float(statistic), float(p_value)
@@ -313,7 +312,7 @@ class DriftDetector:
         self,
         reference: np.ndarray,
         current: np.ndarray,
-    ) -> Tuple[float, float]:
+    ) -> tuple[float, float]:
         """Chi-square test for categorical features."""
         # Get all unique categories
         categories = np.unique(np.concatenate([reference, current]))
@@ -397,8 +396,8 @@ class DriftDetector:
         self,
         reference_data: pd.DataFrame,
         current_data: pd.DataFrame,
-        categorical_features: Optional[List[str]] = None,
-        exclude_features: Optional[List[str]] = None,
+        categorical_features: list[str] | None = None,
+        exclude_features: list[str] | None = None,
     ) -> DataDriftReport:
         """
         Detect data drift between reference and current datasets.
@@ -487,9 +486,9 @@ class DriftDetector:
 
     def detect_model_drift(
         self,
-        reference_metrics: Dict[str, float],
-        current_metrics: Dict[str, float],
-        metric_thresholds: Optional[Dict[str, float]] = None,
+        reference_metrics: dict[str, float],
+        current_metrics: dict[str, float],
+        metric_thresholds: dict[str, float] | None = None,
     ) -> ModelDriftReport:
         """
         Detect model performance drift.
@@ -571,7 +570,7 @@ class DriftDetector:
 
         return report
 
-    def _generate_data_drift_recommendations(self, report: DataDriftReport) -> List[str]:
+    def _generate_data_drift_recommendations(self, report: DataDriftReport) -> list[str]:
         """Generate recommendations for data drift."""
         recommendations = []
 
@@ -596,7 +595,7 @@ class DriftDetector:
 
         return recommendations
 
-    def _generate_model_drift_recommendations(self, report: ModelDriftReport) -> List[str]:
+    def _generate_model_drift_recommendations(self, report: ModelDriftReport) -> list[str]:
         """Generate recommendations for model drift."""
         recommendations = []
 
@@ -621,7 +620,7 @@ class DriftDetector:
 
         return recommendations
 
-    def _save_report(self, report: Union[DataDriftReport, ModelDriftReport]) -> None:
+    def _save_report(self, report: DataDriftReport | ModelDriftReport) -> None:
         """Save drift report to disk."""
         report_file = self._storage_path / f"{report.report_id}.json"
 
@@ -630,20 +629,23 @@ class DriftDetector:
 
     def get_drift_history(
         self,
-        drift_type: Optional[DriftType] = None,
+        drift_type: DriftType | None = None,
         limit: int = 50,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Get drift report history."""
         reports = []
 
         for report_file in sorted(self._storage_path.glob("*.json"), reverse=True)[:limit]:
-            with open(report_file, "r", encoding="utf-8") as f:
+            with open(report_file, encoding="utf-8") as f:
                 report = json.load(f)
 
             if drift_type:
-                if drift_type == DriftType.DATA and "data_drift" in report_file.stem:
-                    reports.append(report)
-                elif drift_type == DriftType.MODEL and "model_drift" in report_file.stem:
+                if (
+                    drift_type == DriftType.DATA
+                    and "data_drift" in report_file.stem
+                    or drift_type == DriftType.MODEL
+                    and "model_drift" in report_file.stem
+                ):
                     reports.append(report)
             else:
                 reports.append(report)
@@ -654,7 +656,7 @@ class DriftDetector:
         self,
         reference_data: pd.DataFrame,
         check_interval: int = 3600,
-    ) -> "DriftMonitor":
+    ) -> DriftMonitor:
         """Create a continuous drift monitor."""
         return DriftMonitor(
             detector=self,
@@ -687,11 +689,11 @@ class DriftMonitor:
         self._check_interval = check_interval
         self._window_size = window_size
 
-        self._current_window: List[pd.Series] = []
+        self._current_window: list[pd.Series] = []
         self._last_check = datetime.now()
-        self._drift_history: List[DataDriftReport] = []
+        self._drift_history: list[DataDriftReport] = []
 
-    def add_data(self, data: Union[pd.DataFrame, pd.Series]) -> Optional[DataDriftReport]:
+    def add_data(self, data: pd.DataFrame | pd.Series) -> DataDriftReport | None:
         """Add new data point(s) to monitor."""
         if isinstance(data, pd.DataFrame):
             for _, row in data.iterrows():
@@ -724,6 +726,6 @@ class DriftMonitor:
         return latest.severity in [DriftSeverity.HIGH, DriftSeverity.CRITICAL]
 
     @property
-    def latest_report(self) -> Optional[DataDriftReport]:
+    def latest_report(self) -> DataDriftReport | None:
         """Get latest drift report."""
         return self._drift_history[-1] if self._drift_history else None

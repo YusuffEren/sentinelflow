@@ -7,9 +7,9 @@ This module contains:
 - FraudDetectorService: Main Kafka consumer orchestrating all engines
 """
 
-from sentinelflow.processor.graph_engine import GraphEngine, FraudRing, TransactionData
+from sentinelflow.processor.detector import DetectorStats, FraudAlert, FraudDetectorService
+from sentinelflow.processor.graph_engine import FraudRing, GraphEngine, TransactionData
 from sentinelflow.processor.redis_geo import RedisGeoClient, UserLocation, haversine_distance
-from sentinelflow.processor.detector import FraudDetectorService, FraudAlert, DetectorStats
 
 __all__ = [
     # Graph Engine

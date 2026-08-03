@@ -15,19 +15,14 @@ Usage:
     streamlit run src/sentinelflow/dashboard/competition_dashboard.py
 """
 
-import json
 import os
 import sys
-import time
-from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
+from datetime import datetime
 
 import numpy as np
 import pandas as pd
-import streamlit as st
-import plotly.express as px
 import plotly.graph_objects as go
-from plotly.subplots import make_subplots
+import streamlit as st
 
 # Add project root to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))))
@@ -59,7 +54,7 @@ def inject_competition_css():
     .stApp {
         background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
     }
-    
+
     /* Main header */
     .competition-header {
         text-align: center;
@@ -69,7 +64,7 @@ def inject_competition_css():
         margin-bottom: 2rem;
         box-shadow: 0 10px 40px rgba(102, 126, 234, 0.4);
     }
-    
+
     .competition-title {
         color: white;
         font-size: 2.5rem;
@@ -77,13 +72,13 @@ def inject_competition_css():
         margin: 0;
         text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
     }
-    
+
     .competition-subtitle {
         color: rgba(255,255,255,0.9);
         font-size: 1.2rem;
         margin-top: 0.5rem;
     }
-    
+
     /* Performance card */
     .perf-card {
         background: linear-gradient(145deg, #1a1a2e, #16213e);
@@ -93,12 +88,12 @@ def inject_competition_css():
         text-align: center;
         transition: transform 0.3s ease, box-shadow 0.3s ease;
     }
-    
+
     .perf-card:hover {
         transform: translateY(-5px);
         box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
     }
-    
+
     .perf-value {
         font-size: 3rem;
         font-weight: 700;
@@ -106,14 +101,14 @@ def inject_competition_css():
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
     }
-    
+
     .perf-label {
         color: #a0a0a0;
         font-size: 0.9rem;
         text-transform: uppercase;
         letter-spacing: 2px;
     }
-    
+
     /* Comparison badge */
     .comparison-badge {
         display: inline-block;
@@ -122,22 +117,22 @@ def inject_competition_css():
         font-weight: 600;
         margin: 0.5rem;
     }
-    
+
     .badge-winning {
         background: linear-gradient(90deg, #00ff88, #00cc6a);
         color: #0a0a0f;
     }
-    
+
     .badge-competitive {
         background: linear-gradient(90deg, #ffd700, #ffaa00);
         color: #0a0a0f;
     }
-    
+
     .badge-needs-work {
         background: linear-gradient(90deg, #ff6b6b, #ee5a5a);
         color: white;
     }
-    
+
     /* Model card */
     .model-card {
         background: rgba(26, 26, 46, 0.8);
@@ -146,13 +141,13 @@ def inject_competition_css():
         padding: 1rem;
         margin: 0.5rem 0;
     }
-    
+
     .model-name {
         color: #00d9ff;
         font-size: 1.2rem;
         font-weight: 600;
     }
-    
+
     /* Feature importance */
     .feature-bar {
         height: 20px;
@@ -160,12 +155,12 @@ def inject_competition_css():
         margin: 5px 0;
         transition: width 0.5s ease;
     }
-    
+
     /* Sidebar styling */
     .css-1d391kg {
         background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
     }
-    
+
     /* Streamlit overrides */
     .stMetric {
         background: rgba(26, 26, 46, 0.8);
@@ -173,31 +168,31 @@ def inject_competition_css():
         padding: 1rem;
         border: 1px solid #3a3a5a;
     }
-    
+
     .stMetric label {
         color: #a0a0a0 !important;
     }
-    
+
     .stMetric .css-1wivap2 {
         color: #00ff88 !important;
     }
-    
+
     /* Tab styling */
     .stTabs [data-baseweb="tab-list"] {
         gap: 8px;
     }
-    
+
     .stTabs [data-baseweb="tab"] {
         background: rgba(26, 26, 46, 0.8);
         border-radius: 10px;
         color: #a0a0a0;
         padding: 0.5rem 1rem;
     }
-    
+
     .stTabs [data-baseweb="tab"]:hover {
         background: rgba(102, 126, 234, 0.3);
     }
-    
+
     .stTabs [aria-selected="true"] {
         background: linear-gradient(90deg, #667eea, #764ba2) !important;
         color: white !important;
@@ -260,13 +255,13 @@ def create_gauge_chart(value: float, title: str, target: float = 0.992) -> go.Fi
         paper_bgcolor="rgba(0,0,0,0)",
         font={"color": "white"},
         height=250,
-        margin=dict(l=20, r=20, t=50, b=20),
+        margin={"l": 20, "r": 20, "t": 50, "b": 20},
     )
 
     return fig
 
 
-def create_model_comparison_chart(metrics: Dict[str, Dict[str, float]]) -> go.Figure:
+def create_model_comparison_chart(metrics: dict[str, dict[str, float]]) -> go.Figure:
     """Create radar chart comparing models."""
 
     categories = ["Accuracy", "Precision", "Recall", "F1", "AUC-ROC"]
@@ -291,38 +286,38 @@ def create_model_comparison_chart(metrics: Dict[str, Dict[str, float]]) -> go.Fi
                 theta=categories + [categories[0]],
                 fill="toself",
                 fillcolor=f"rgba({int(colors[i % len(colors)][1:3], 16)}, {int(colors[i % len(colors)][3:5], 16)}, {int(colors[i % len(colors)][5:7], 16)}, 0.2)",
-                line=dict(color=colors[i % len(colors)], width=2),
+                line={"color": colors[i % len(colors)], "width": 2},
                 name=model_name,
             )
         )
 
     fig.update_layout(
-        polar=dict(
-            bgcolor="rgba(26,26,46,0.8)",
-            radialaxis=dict(
-                visible=True,
-                range=[90, 100],
-                tickfont={"color": "white"},
-            ),
-            angularaxis=dict(
-                tickfont={"color": "white"},
-            ),
-        ),
+        polar={
+            "bgcolor": "rgba(26,26,46,0.8)",
+            "radialaxis": {
+                "visible": True,
+                "range": [90, 100],
+                "tickfont": {"color": "white"},
+            },
+            "angularaxis": {
+                "tickfont": {"color": "white"},
+            },
+        },
         showlegend=True,
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
-        legend=dict(
-            font=dict(color="white"),
-            bgcolor="rgba(26,26,46,0.8)",
-        ),
+        legend={
+            "font": {"color": "white"},
+            "bgcolor": "rgba(26,26,46,0.8)",
+        },
         height=400,
-        margin=dict(l=50, r=50, t=50, b=50),
+        margin={"l": 50, "r": 50, "t": 50, "b": 50},
     )
 
     return fig
 
 
-def create_feature_importance_chart(importances: Dict[str, float], top_n: int = 15) -> go.Figure:
+def create_feature_importance_chart(importances: dict[str, float], top_n: int = 15) -> go.Figure:
     """Create horizontal bar chart for feature importance."""
 
     # Sort and get top N
@@ -342,33 +337,33 @@ def create_feature_importance_chart(importances: Dict[str, float], top_n: int = 
             x=values,
             y=features,
             orientation="h",
-            marker=dict(
-                color=colors,
-                line=dict(color="rgba(102, 126, 234, 1)", width=1),
-            ),
+            marker={
+                "color": colors,
+                "line": {"color": "rgba(102, 126, 234, 1)", "width": 1},
+            },
             text=[f"{v:.3f}" for v in values],
             textposition="outside",
-            textfont=dict(color="white"),
+            textfont={"color": "white"},
         )
     )
 
     fig.update_layout(
         title="Top Feature Importance",
-        xaxis=dict(
-            title="Importance (Normalized)",
-            titlefont=dict(color="white"),
-            tickfont=dict(color="white"),
-            gridcolor="rgba(255,255,255,0.1)",
-        ),
-        yaxis=dict(
-            titlefont=dict(color="white"),
-            tickfont=dict(color="white"),
-            autorange="reversed",
-        ),
+        xaxis={
+            "title": "Importance (Normalized)",
+            "titlefont": {"color": "white"},
+            "tickfont": {"color": "white"},
+            "gridcolor": "rgba(255,255,255,0.1)",
+        },
+        yaxis={
+            "titlefont": {"color": "white"},
+            "tickfont": {"color": "white"},
+            "autorange": "reversed",
+        },
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
         height=400,
-        margin=dict(l=150, r=50, t=50, b=50),
+        margin={"l": 150, "r": 50, "t": 50, "b": 50},
     )
 
     return fig
@@ -399,18 +394,18 @@ def create_confusion_matrix_chart(tp: int, tn: int, fp: int, fn: int) -> go.Figu
 
     fig.update_layout(
         title="Confusion Matrix",
-        xaxis=dict(tickfont=dict(color="white")),
-        yaxis=dict(tickfont=dict(color="white"), autorange="reversed"),
+        xaxis={"tickfont": {"color": "white"}},
+        yaxis={"tickfont": {"color": "white"}, "autorange": "reversed"},
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
         height=350,
-        margin=dict(l=100, r=50, t=50, b=50),
+        margin={"l": 100, "r": 50, "t": 50, "b": 50},
     )
 
     return fig
 
 
-def create_latency_distribution_chart(latencies: List[float]) -> go.Figure:
+def create_latency_distribution_chart(latencies: list[float]) -> go.Figure:
     """Create latency distribution histogram."""
 
     fig = go.Figure(
@@ -418,10 +413,10 @@ def create_latency_distribution_chart(latencies: List[float]) -> go.Figure:
             go.Histogram(
                 x=latencies,
                 nbinsx=50,
-                marker=dict(
-                    color="rgba(102, 126, 234, 0.7)",
-                    line=dict(color="rgba(102, 126, 234, 1)", width=1),
-                ),
+                marker={
+                    "color": "rgba(102, 126, 234, 0.7)",
+                    "line": {"color": "rgba(102, 126, 234, 1)", "width": 1},
+                },
             )
         ]
     )
@@ -429,24 +424,24 @@ def create_latency_distribution_chart(latencies: List[float]) -> go.Figure:
     # Add target line
     fig.add_vline(
         x=30,
-        line=dict(color="#00ff88", width=2, dash="dash"),
-        annotation=dict(text="Target: 30ms", font=dict(color="#00ff88")),
+        line={"color": "#00ff88", "width": 2, "dash": "dash"},
+        annotation={"text": "Target: 30ms", "font": {"color": "#00ff88"}},
     )
 
     fig.update_layout(
         title="Inference Latency Distribution",
-        xaxis=dict(
-            title="Latency (ms)",
-            titlefont=dict(color="white"),
-            tickfont=dict(color="white"),
-            gridcolor="rgba(255,255,255,0.1)",
-        ),
-        yaxis=dict(
-            title="Frequency",
-            titlefont=dict(color="white"),
-            tickfont=dict(color="white"),
-            gridcolor="rgba(255,255,255,0.1)",
-        ),
+        xaxis={
+            "title": "Latency (ms)",
+            "titlefont": {"color": "white"},
+            "tickfont": {"color": "white"},
+            "gridcolor": "rgba(255,255,255,0.1)",
+        },
+        yaxis={
+            "title": "Frequency",
+            "titlefont": {"color": "white"},
+            "tickfont": {"color": "white"},
+            "gridcolor": "rgba(255,255,255,0.1)",
+        },
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
         height=300,
@@ -480,8 +475,8 @@ def main():
     with st.sidebar:
         st.markdown("### ⚙️ Dashboard Ayarları")
 
-        refresh_rate = st.slider("Yenileme Hızı (saniye)", 1, 30, 5)
-        show_baseline = st.checkbox("Baseline'ı Göster", value=True)
+        st.slider("Yenileme Hızı (saniye)", 1, 30, 5)
+        st.checkbox("Baseline'ı Göster", value=True)
 
         st.markdown("---")
 
@@ -491,7 +486,7 @@ def main():
         **Geçen Yıl 1. (2025)**
         - Doğruluk: %99.2
         - Veri Seti: 200K işlem
-        
+
         **Hedefimiz (2026)**
         - Doğruluk: %99.5+
         - Veri Seti: 500K+ işlem
@@ -796,7 +791,7 @@ def main():
 
                 st.markdown(
                     f"""
-                <div style="display: flex; justify-content: space-between; padding: 10px; 
+                <div style="display: flex; justify-content: space-between; padding: 10px;
                             background: rgba(26,26,46,0.8); border-radius: 10px; margin: 5px 0;
                             border-left: 4px solid {color};">
                     <span style="color: white;">{icon} {target_name}</span>

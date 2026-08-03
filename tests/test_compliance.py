@@ -1,6 +1,5 @@
 # SentinelFlow - Compliance Module Tests
 
-import pytest
 from datetime import datetime
 
 

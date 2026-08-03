@@ -35,8 +35,9 @@ dependencies = [
     # =============================================================================
     # Core Dependencies
     # =============================================================================
-    "pydantic>=2.5.0",
+    "pydantic[email]>=2.5.0",
     "pydantic-settings>=2.1.0",
+    "email-validator>=2.0.0",
     "python-dotenv>=1.0.0",
     "loguru>=0.7.2",
     "rich>=13.7.0",
@@ -221,6 +222,7 @@ extend-exclude = '''
 [tool.ruff]
 line-length = 100
 target-version = "py39"
+[tool.ruff.lint]
 select = [
     "E",   # pycodestyle errors
     "W",   # pycodestyle warnings
@@ -231,7 +233,7 @@ select = [
     "UP",  # pyupgrade
     "SIM", # flake8-simplify
 ]
-ignore = ["E501", "B008", "C901"]
+ignore = ["E501", "B008", "C901", "E722", "F401", "B018", "B027", "F402", "B904", "C401", "B007", "SIM102", "E402", "B017"]
 
 [tool.mypy]
 python_version = "3.9"

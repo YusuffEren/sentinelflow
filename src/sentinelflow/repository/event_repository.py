@@ -11,13 +11,13 @@ from datetime import datetime, timezone
 from typing import Any
 from uuid import uuid4
 
-from sqlalchemy import select, func, and_, desc
-from sqlalchemy.orm import Session
-from sqlalchemy.ext.asyncio import AsyncSession
 from loguru import logger
+from sqlalchemy import desc, func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Session
 
-from sentinelflow.database.models import CaseEventModel
 from sentinelflow.contracts import CaseEvent, EventType
+from sentinelflow.database.models import CaseEventModel
 
 
 def generate_event_id() -> str:

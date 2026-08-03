@@ -31,13 +31,17 @@ import json
 import os
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Optional
 
-import redis
+try:
+    import redis
+    HAS_REDIS = True
+except ImportError:
+    redis = None
+    HAS_REDIS = False
+
 from loguru import logger
 
 from sentinelflow.config import get_settings
-
 
 # =============================================================================
 # Data Classes
@@ -67,7 +71,7 @@ class UserLocation:
         }
 
     @classmethod
-    def from_dict(cls, data: dict) -> "UserLocation":
+    def from_dict(cls, data: dict) -> UserLocation:
         """Deserialize from dictionary."""
         return cls(
             iban=data["iban"],
@@ -102,7 +106,7 @@ def haversine_distance(
     Returns:
         Distance in kilometers
     """
-    from math import radians, sin, cos, sqrt, atan2
+    from math import atan2, cos, radians, sin, sqrt
 
     # Earth's radius in kilometers
     R = 6371.0

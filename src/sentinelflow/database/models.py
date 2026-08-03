@@ -15,33 +15,21 @@ Tables:
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any
 from uuid import uuid4
 
 from sqlalchemy import (
-    Column,
-    String,
-    Float,
     Boolean,
-    Integer,
     DateTime,
-    Text,
+    Float,
     ForeignKey,
     Index,
-    Enum as SQLEnum,
-    JSON,
-    func,
+    Integer,
+    String,
+    Text,
 )
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
-from sqlalchemy.orm import DeclarativeBase, relationship, Mapped, mapped_column
-
-from sentinelflow.contracts.enums import (
-    FraudType,
-    Severity,
-    CaseStatus,
-    CasePriority,
-    EventType,
-)
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
 def generate_id(prefix: str) -> str:
@@ -119,7 +107,7 @@ class AlertModel(Base):
     # Relations
     related_transactions: Mapped[list[str]] = mapped_column(ARRAY(String), default=list)
     related_accounts: Mapped[list[str]] = mapped_column(ARRAY(String), default=list)
-    case_id: Mapped[Optional[str]] = mapped_column(
+    case_id: Mapped[str | None] = mapped_column(
         String(50),
         ForeignKey("cases.case_id", ondelete="SET NULL"),
         nullable=True,
@@ -140,16 +128,16 @@ class AlertModel(Base):
 
     # Status
     is_dismissed: Mapped[bool] = mapped_column(Boolean, default=False)
-    dismissed_by: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
-    dismissed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
-    dismissed_reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    dismissed_by: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    dismissed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    dismissed_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Metadata
     detector_versions: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
     processing_time_ms: Mapped[float] = mapped_column(Float, default=0.0)
 
     # Relationships
-    case: Mapped[Optional["CaseModel"]] = relationship("CaseModel", back_populates="alerts")
+    case: Mapped[CaseModel | None] = relationship("CaseModel", back_populates="alerts")
 
     # Indexes
     __table_args__ = (
@@ -212,7 +200,7 @@ class CaseModel(Base):
     priority: Mapped[str] = mapped_column(String(10), default="P3", index=True)
 
     # Fraud classification
-    primary_fraud_type: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    primary_fraud_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
     fraud_types: Mapped[list[str]] = mapped_column(ARRAY(String), default=list)
 
     # Aggregated metrics
@@ -226,8 +214,8 @@ class CaseModel(Base):
     involved_transactions: Mapped[list[str]] = mapped_column(ARRAY(String), default=list)
 
     # Assignment
-    assigned_to: Mapped[Optional[str]] = mapped_column(String(100), nullable=True, index=True)
-    assigned_team: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    assigned_to: Mapped[str | None] = mapped_column(String(100), nullable=True, index=True)
+    assigned_team: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
     # Tags
     tags: Mapped[list[str]] = mapped_column(ARRAY(String), default=list)
@@ -243,35 +231,31 @@ class CaseModel(Base):
         default=utc_now,
         onupdate=utc_now,
     )
-    first_alert_at: Mapped[Optional[datetime]] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    last_alert_at: Mapped[Optional[datetime]] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    first_alert_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_alert_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # SLA
-    sla_due_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    sla_due_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     sla_breached: Mapped[bool] = mapped_column(Boolean, default=False)
 
     # Resolution
-    resolution: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    resolved_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
-    resolved_by: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    resolution: Mapped[str | None] = mapped_column(Text, nullable=True)
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    resolved_by: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
     # Compliance
     str_required: Mapped[bool] = mapped_column(Boolean, default=False)
     str_filed: Mapped[bool] = mapped_column(Boolean, default=False)
-    str_filed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
-    str_reference: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    str_filed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    str_reference: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
     # Notes
     notes_count: Mapped[int] = mapped_column(Integer, default=0)
-    last_note: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    last_note: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Relationships
-    alerts: Mapped[list["AlertModel"]] = relationship("AlertModel", back_populates="case")
-    events: Mapped[list["CaseEventModel"]] = relationship("CaseEventModel", back_populates="case")
+    alerts: Mapped[list[AlertModel]] = relationship("AlertModel", back_populates="case")
+    events: Mapped[list[CaseEventModel]] = relationship("CaseEventModel", back_populates="case")
 
     # Indexes
     __table_args__ = (
@@ -339,15 +323,15 @@ class CaseEventModel(Base):
 
     # Change details
     description: Mapped[str] = mapped_column(Text, default="")
-    previous_value: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    new_value: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    previous_value: Mapped[str | None] = mapped_column(Text, nullable=True)
+    new_value: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Extra data
     extra_data: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
 
     # Related entities
-    alert_id: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
-    transaction_id: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    alert_id: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    transaction_id: Mapped[str | None] = mapped_column(String(50), nullable=True)
 
     # Timestamp
     created_at: Mapped[datetime] = mapped_column(
@@ -357,11 +341,11 @@ class CaseEventModel(Base):
     )
 
     # Audit fields
-    ip_address: Mapped[Optional[str]] = mapped_column(String(45), nullable=True)
-    user_agent: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    ip_address: Mapped[str | None] = mapped_column(String(45), nullable=True)
+    user_agent: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Relationships
-    case: Mapped["CaseModel"] = relationship("CaseModel", back_populates="events")
+    case: Mapped[CaseModel] = relationship("CaseModel", back_populates="events")
 
     # Indexes
     __table_args__ = (Index("ix_case_events_case_created", case_id, created_at.desc()),)
@@ -397,7 +381,7 @@ class TransactionSummaryModel(Base):
     is_fraud: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
     fraud_score: Mapped[float] = mapped_column(Float, default=0.0)
     alert_ids: Mapped[list[str]] = mapped_column(ARRAY(String), default=list)
-    case_id: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    case_id: Mapped[str | None] = mapped_column(String(50), nullable=True)
 
     # Metadata
     processed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
@@ -444,18 +428,18 @@ class ModelVersionModel(Base):
     metrics: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
 
     # Training info
-    training_dataset: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+    training_dataset: Mapped[str | None] = mapped_column(String(200), nullable=True)
     training_samples: Mapped[int] = mapped_column(Integer, default=0)
     training_time_seconds: Mapped[float] = mapped_column(Float, default=0.0)
     hyperparameters: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
 
     # Artifact
-    artifact_path: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
-    artifact_hash: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    artifact_path: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    artifact_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
-    deployed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    deployed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # Metadata
     description: Mapped[str] = mapped_column(Text, default="")
@@ -488,21 +472,21 @@ class UserModel(Base):
     full_name: Mapped[str] = mapped_column(String(200), nullable=False)
     role: Mapped[str] = mapped_column(String(20), default="viewer", index=True)
     status: Mapped[str] = mapped_column(String(20), default="active", index=True)
-    team: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    team: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utc_now, onupdate=utc_now
     )
-    last_login: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_login: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # Settings
     preferences: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
 
     # Security
     failed_login_attempts: Mapped[int] = mapped_column(Integer, default=0)
-    locked_until: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    locked_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary (excluding password)."""
@@ -549,7 +533,7 @@ class RefreshTokenModel(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
     # Metadata
-    user_agent: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    ip_address: Mapped[Optional[str]] = mapped_column(String(45), nullable=True)
+    user_agent: Mapped[str | None] = mapped_column(Text, nullable=True)
+    ip_address: Mapped[str | None] = mapped_column(String(45), nullable=True)
 
     is_revoked: Mapped[bool] = mapped_column(Boolean, default=False)

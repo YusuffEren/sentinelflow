@@ -18,29 +18,27 @@ from pydantic import BaseModel, Field
 # =============================================================================
 # Re-export from contracts (single source of truth)
 # =============================================================================
-
 from sentinelflow.contracts import (
     # Version
     SCHEMA_VERSION,
-    # Enums
-    FraudType,
-    Severity,
-    CaseStatus,
-    CasePriority,
-    EventType,
-    # Transaction
-    TransactionCreate,
-    TransactionSummary,
     # Alert
     Alert,
     AlertCreate,
-    Evidence,
     # Case
     Case,
     CaseCreate,
     CaseEvent,
+    CasePriority,
+    CaseStatus,
+    EventType,
+    Evidence,
+    # Enums
+    FraudType,
+    Severity,
+    # Transaction
+    TransactionCreate,
+    TransactionSummary,
 )
-
 from sentinelflow.contracts.alert import AlertListResponse
 from sentinelflow.contracts.case import CaseListResponse, CaseSummary, CaseUpdate
 

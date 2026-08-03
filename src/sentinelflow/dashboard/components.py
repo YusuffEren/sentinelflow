@@ -13,12 +13,10 @@ Provides modular UI components:
 
 from __future__ import annotations
 
-import json
 from datetime import datetime
-from typing import Any, Dict, List
+from typing import Any
 
 import streamlit as st
-
 
 # =============================================================================
 # Metric Cards
@@ -65,7 +63,7 @@ def metric_card(
     )
 
 
-def metric_row(metrics: List[Dict[str, Any]]) -> None:
+def metric_row(metrics: list[dict[str, Any]]) -> None:
     """
     Display a row of metric cards.
 
@@ -91,7 +89,7 @@ def metric_row(metrics: List[Dict[str, Any]]) -> None:
 
 
 def alert_card(
-    alert: Dict[str, Any],
+    alert: dict[str, Any],
     on_investigate: callable = None,
     on_dismiss: callable = None,
 ) -> None:
@@ -167,7 +165,7 @@ def alert_card(
                 {alert.get("description", "")[:100]}
             </div>
             <div style="color: #888; margin-top: 0.25rem; font-size: 0.8rem;">
-                TX: {alert.get("transaction_id", "N/A")[:20]}... | 
+                TX: {alert.get("transaction_id", "N/A")[:20]}... |
                 Tutar: {alert.get("amount", 0):,.2f} TL
             </div>
         </div>
@@ -176,7 +174,7 @@ def alert_card(
     )
 
 
-def alert_list(alerts: List[Dict[str, Any]], max_items: int = 10) -> None:
+def alert_list(alerts: list[dict[str, Any]], max_items: int = 10) -> None:
     """
     Display a list of alerts.
 
@@ -231,7 +229,7 @@ def status_indicator(
     )
 
 
-def system_status_panel(services: Dict[str, str]) -> None:
+def system_status_panel(services: dict[str, str]) -> None:
     """
     Display system status panel.
 
@@ -263,7 +261,7 @@ def system_status_panel(services: Dict[str, str]) -> None:
 # =============================================================================
 
 
-def ring_stats_panel(ring_data: Dict[str, Any]) -> None:
+def ring_stats_panel(ring_data: dict[str, Any]) -> None:
     """
     Display fraud ring statistics.
 
@@ -289,7 +287,7 @@ def ring_stats_panel(ring_data: Dict[str, Any]) -> None:
 # =============================================================================
 
 
-def compliance_summary(stats: Dict[str, Any]) -> None:
+def compliance_summary(stats: dict[str, Any]) -> None:
     """
     Display compliance summary panel.
 
@@ -345,7 +343,7 @@ def compliance_summary(stats: Dict[str, Any]) -> None:
 
 def model_performance_card(
     model_name: str,
-    metrics: Dict[str, float],
+    metrics: dict[str, float],
     status: str = "ready",
 ) -> None:
     """
@@ -391,7 +389,7 @@ def model_performance_card(
     )
 
 
-def ml_dashboard_panel(models: List[Dict[str, Any]]) -> None:
+def ml_dashboard_panel(models: list[dict[str, Any]]) -> None:
     """
     Display ML models dashboard panel.
 

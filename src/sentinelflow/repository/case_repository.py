@@ -11,13 +11,13 @@ from datetime import datetime, timezone
 from typing import Any
 from uuid import uuid4
 
-from sqlalchemy import select, func, and_, desc, update
-from sqlalchemy.orm import Session
-from sqlalchemy.ext.asyncio import AsyncSession
 from loguru import logger
+from sqlalchemy import and_, desc, func, select, update
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Session
 
-from sentinelflow.database.models import CaseModel, AlertModel
-from sentinelflow.contracts import Case, CaseCreate, CaseStatus, CasePriority, Severity
+from sentinelflow.contracts import Case, CaseCreate, CasePriority, CaseStatus
+from sentinelflow.database.models import AlertModel, CaseModel
 
 
 def generate_case_id() -> str:
@@ -361,11 +361,11 @@ class CaseRepository:
 
         # Calculate aggregates
         total_amount = sum(a.amount for a in alerts)
-        fraud_types = list(set(a.fraud_type for a in alerts))
+        fraud_types = list({a.fraud_type for a in alerts})
         involved_accounts = list(
             set([a.sender_iban for a in alerts] + [a.receiver_iban for a in alerts])
         )
-        involved_txns = list(set(a.transaction_id for a in alerts))
+        involved_txns = list({a.transaction_id for a in alerts})
 
         # Determine max severity
         severity_order = {"low": 1, "medium": 2, "high": 3, "critical": 4}
@@ -406,11 +406,11 @@ class CaseRepository:
             return
 
         total_amount = sum(a.amount for a in alerts)
-        fraud_types = list(set(a.fraud_type for a in alerts))
+        fraud_types = list({a.fraud_type for a in alerts})
         involved_accounts = list(
             set([a.sender_iban for a in alerts] + [a.receiver_iban for a in alerts])
         )
-        involved_txns = list(set(a.transaction_id for a in alerts))
+        involved_txns = list({a.transaction_id for a in alerts})
 
         severity_order = {"low": 1, "medium": 2, "high": 3, "critical": 4}
         max_sev = max(alerts, key=lambda a: severity_order.get(a.severity, 0)).severity

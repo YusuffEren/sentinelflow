@@ -7,21 +7,20 @@ Authentication endpoints: login, logout, register, token refresh.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Depends, Request
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from loguru import logger
+from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.security import HTTPBearer
 
 from sentinelflow.api.deps import get_db_session
-from sentinelflow.auth.service import AuthService
 from sentinelflow.auth.dependencies import get_current_active_user
+from sentinelflow.auth.service import AuthService
 from sentinelflow.contracts import (
+    LoginRequest,
+    TokenResponse,
     User,
     UserCreate,
     UserPublic,
-    LoginRequest,
-    TokenResponse,
 )
-from sentinelflow.contracts.user import RefreshRequest, PasswordChangeRequest
+from sentinelflow.contracts.user import PasswordChangeRequest, RefreshRequest
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 security = HTTPBearer(auto_error=False)

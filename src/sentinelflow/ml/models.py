@@ -268,8 +268,8 @@ class XGBoostFraudModel(BaseFraudModel):
         """Load a pre-trained XGBoost model from file, including scaler."""
         try:
             # Check if this is a pickle wrapper (contains model + scaler)
-            if path.endswith('.pkl'):
-                with open(path, 'rb') as f:
+            if path.endswith(".pkl"):
+                with open(path, "rb") as f:
                     data = pickle.load(f)
                 self._model = data.get("model")
                 self._scaler = data.get("scaler")
@@ -290,8 +290,8 @@ class XGBoostFraudModel(BaseFraudModel):
             logger.warning("XGBoost requires labels for training")
             return
 
-        if len(X) < 50:
-            logger.debug(f"XGBoost: Need at least 50 samples, have {len(X)}")
+        if len(X) < 2:
+            logger.debug(f"XGBoost: Need at least 2 samples, have {len(X)}")
             return
 
         # Scale features

@@ -14,21 +14,20 @@ Integrates with risk scoring, PEP screening, and sanctions checking.
 
 from __future__ import annotations
 
+import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Optional
-import uuid
+from typing import Any
 
 from loguru import logger
 
 from sentinelflow.kyc.risk_scorer import (
-    CustomerRiskScorer,
     CustomerProfile,
+    CustomerRiskScorer,
     RiskAssessment,
     RiskCategory,
 )
-
 
 # =============================================================================
 # Enums
@@ -151,7 +150,6 @@ class CDDResult:
                 "adverse_media": self.adverse_media_check_passed,
             },
             "created_at": self.created_at,
-            "status": self.status.value,
         }
 
     def summary(self) -> str:

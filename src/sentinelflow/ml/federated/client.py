@@ -18,7 +18,7 @@ Privacy guarantees:
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Optional
+
 import numpy as np
 from loguru import logger
 
@@ -226,7 +226,7 @@ class FederatedClient:
         # Class weighting
         pos_count = sum(self._y_train)
         neg_count = len(self._y_train) - pos_count
-        pos_weight = torch.tensor([neg_count / (pos_count + 1e-6)]).to(self._device)
+        torch.tensor([neg_count / (pos_count + 1e-6)]).to(self._device)
         criterion = nn.BCELoss()
 
         # Train for specified epochs
@@ -234,7 +234,7 @@ class FederatedClient:
         total_loss = 0.0
         num_batches = 0
 
-        for epoch in range(self.epochs_per_round):
+        for _epoch in range(self.epochs_per_round):
             epoch_loss = 0.0
             for batch_X, batch_y in loader:
                 optimizer.zero_grad()

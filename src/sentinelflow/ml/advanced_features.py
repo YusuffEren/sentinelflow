@@ -18,13 +18,11 @@ Bu özellikler, standart özelliklerin üzerine eklenerek
 
 from __future__ import annotations
 
-import math
-import hashlib
-from collections import defaultdict, deque, Counter
+from collections import Counter, defaultdict, deque
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional, Set, Tuple
 from enum import Enum
+from typing import Any
 
 import numpy as np
 from loguru import logger
@@ -75,8 +73,8 @@ class BehaviorProfile:
     """Kullanıcı davranış profili."""
 
     # Zaman kalıpları
-    typical_hours: List[int] = field(default_factory=list)
-    typical_days: List[int] = field(default_factory=list)
+    typical_hours: list[int] = field(default_factory=list)
+    typical_days: list[int] = field(default_factory=list)
     hour_entropy: float = 0.0
 
     # Miktar kalıpları
@@ -84,7 +82,7 @@ class BehaviorProfile:
     std_amount: float = 0.0
     median_amount: float = 0.0
     max_amount: float = 0.0
-    typical_amount_range: Tuple[float, float] = (0.0, 0.0)
+    typical_amount_range: tuple[float, float] = (0.0, 0.0)
 
     # Hız kalıpları
     avg_tx_per_day: float = 0.0
@@ -92,13 +90,13 @@ class BehaviorProfile:
     burst_threshold: float = 0.0
 
     # Alıcı kalıpları
-    frequent_receivers: Set[str] = field(default_factory=set)
+    frequent_receivers: set[str] = field(default_factory=set)
     unique_receiver_count: int = 0
     receiver_concentration: float = 0.0  # Herfindahl index
 
     # Cihaz/Kanal
-    typical_channels: Set[str] = field(default_factory=set)
-    typical_devices: Set[str] = field(default_factory=set)
+    typical_channels: set[str] = field(default_factory=set)
+    typical_devices: set[str] = field(default_factory=set)
 
 
 @dataclass
@@ -111,7 +109,7 @@ class AccountActivity:
 
     # Alıcılar
     receivers: deque = field(default_factory=lambda: deque(maxlen=1000))
-    receiver_counts: Dict[str, int] = field(default_factory=lambda: defaultdict(int))
+    receiver_counts: dict[str, int] = field(default_factory=lambda: defaultdict(int))
 
     # Kanallar ve cihazlar
     channels: deque = field(default_factory=lambda: deque(maxlen=500))
@@ -121,20 +119,20 @@ class AccountActivity:
     transaction_types: deque = field(default_factory=lambda: deque(maxlen=500))
 
     # Önceki işlem bilgileri
-    last_tx_timestamp: Optional[datetime] = None
+    last_tx_timestamp: datetime | None = None
     last_tx_amount: float = 0.0
     last_tx_receiver: str = ""
 
     # Günlük/haftalık istatistikler
-    daily_tx_counts: Dict[str, int] = field(default_factory=lambda: defaultdict(int))
-    daily_amounts: Dict[str, float] = field(default_factory=lambda: defaultdict(float))
+    daily_tx_counts: dict[str, int] = field(default_factory=lambda: defaultdict(int))
+    daily_amounts: dict[str, float] = field(default_factory=lambda: defaultdict(float))
 
 
 # =============================================================================
 # ADVANCED FEATURE NAMES
 # =============================================================================
 
-ADVANCED_FEATURE_NAMES: List[str] = [
+ADVANCED_FEATURE_NAMES: list[str] = [
     # Behavioral deviation features (8)
     "amount_deviation_score",
     "hour_deviation_score",
@@ -213,10 +211,10 @@ class AdvancedFeatureEngine:
         self._min_samples = behavior_profile_min_samples
 
         # Per-account activity tracking
-        self._account_activities: Dict[str, AccountActivity] = defaultdict(AccountActivity)
+        self._account_activities: dict[str, AccountActivity] = defaultdict(AccountActivity)
 
         # Global statistics for Benford analysis
-        self._global_first_digits: List[int] = []
+        self._global_first_digits: list[int] = []
         self._global_amounts: deque = deque(maxlen=100000)
 
         logger.info(
@@ -226,9 +224,9 @@ class AdvancedFeatureEngine:
 
     def extract(
         self,
-        tx_data: Dict[str, Any],
+        tx_data: dict[str, Any],
         include_base: bool = False,
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         """
         Extract advanced features from transaction.
 
@@ -239,7 +237,7 @@ class AdvancedFeatureEngine:
         Returns:
             Feature dictionary
         """
-        features: Dict[str, float] = {}
+        features: dict[str, float] = {}
 
         # Parse transaction data
         amount = float(tx_data.get("amount", 0.0))
@@ -300,7 +298,7 @@ class AdvancedFeatureEngine:
 
         return features
 
-    def extract_vector(self, tx_data: Dict[str, Any]) -> np.ndarray:
+    def extract_vector(self, tx_data: dict[str, Any]) -> np.ndarray:
         """Extract features as numpy array."""
         features = self.extract(tx_data)
         return np.array(
@@ -318,7 +316,7 @@ class AdvancedFeatureEngine:
         receiver_iban: str,
         channel: str,
         activity: AccountActivity,
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         """Davranışsal sapma özellikleri çıkar."""
         features = {}
 
@@ -403,7 +401,7 @@ class AdvancedFeatureEngine:
     # Benford's Law Features
     # =========================================================================
 
-    def _extract_benford_features(self, amount: float) -> Dict[str, float]:
+    def _extract_benford_features(self, amount: float) -> dict[str, float]:
         """Benford Yasası tabanlı özellikler çıkar."""
         features = {}
 
@@ -462,7 +460,7 @@ class AdvancedFeatureEngine:
         receiver_iban: str,
         timestamp: datetime,
         activity: AccountActivity,
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         """Graf tabanlı ağ özellikleri çıkar."""
         features = {}
 
@@ -523,7 +521,7 @@ class AdvancedFeatureEngine:
         self,
         timestamp: datetime,
         activity: AccountActivity,
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         """Zaman serisi kalıp özellikleri çıkar."""
         features = {}
 
@@ -593,7 +591,7 @@ class AdvancedFeatureEngine:
         timestamp: datetime,
         receiver_iban: str,
         activity: AccountActivity,
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         """Kompozit risk skorları çıkar."""
         features = {}
 
@@ -667,7 +665,7 @@ class AdvancedFeatureEngine:
         amount: float,
         timestamp: datetime,
         activity: AccountActivity,
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         """İstatistiksel özellikler çıkar."""
         features = {}
 
@@ -774,7 +772,7 @@ class AdvancedFeatureEngine:
             return datetime.now(timezone.utc)
 
     @staticmethod
-    def get_feature_names() -> List[str]:
+    def get_feature_names() -> list[str]:
         """Return ordered feature names."""
         return ADVANCED_FEATURE_NAMES.copy()
 
@@ -807,7 +805,7 @@ class CombinedFeatureEngine:
 
         logger.info("CombinedFeatureEngine initialized (53 features)")
 
-    def extract(self, tx_data: Dict[str, Any]) -> Dict[str, float]:
+    def extract(self, tx_data: dict[str, Any]) -> dict[str, float]:
         """Extract all features."""
         base_features = self._base_engine.extract(tx_data)
         advanced_features = self._advanced_engine.extract(tx_data)
@@ -816,14 +814,14 @@ class CombinedFeatureEngine:
         combined = {**base_features, **advanced_features}
         return combined
 
-    def extract_vector(self, tx_data: Dict[str, Any]) -> np.ndarray:
+    def extract_vector(self, tx_data: dict[str, Any]) -> np.ndarray:
         """Extract as numpy array."""
         base_vec = self._base_engine.extract_vector(tx_data)
         advanced_vec = self._advanced_engine.extract_vector(tx_data)
         return np.concatenate([base_vec, advanced_vec])
 
     @staticmethod
-    def get_feature_names() -> List[str]:
+    def get_feature_names() -> list[str]:
         """Get all feature names."""
         from sentinelflow.ml.feature_engine import FEATURE_NAMES
 

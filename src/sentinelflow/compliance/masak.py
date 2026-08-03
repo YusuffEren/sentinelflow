@@ -24,16 +24,14 @@ Reference:
 from __future__ import annotations
 
 import json
-import os
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from loguru import logger
-
 
 # =============================================================================
 # Constants and Enums
@@ -471,7 +469,7 @@ class MASAKReporter:
         description = alert_data.get("description", "")
         confidence = float(alert_data.get("confidence", 0)) * 100
 
-        base = f"SentinelFlow otomatik tespit sistemi tarafından "
+        base = "SentinelFlow otomatik tespit sistemi tarafından "
 
         type_descriptions = {
             "circular_ring": "para aklama şüphesi içeren döngüsel işlem halkası",

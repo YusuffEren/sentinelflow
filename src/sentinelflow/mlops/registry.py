@@ -37,19 +37,16 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
 import pickle
 import shutil
-from dataclasses import dataclass, field, asdict
+import threading
+from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
-import threading
+from typing import Any
 
-import numpy as np
 from loguru import logger
-
 
 # =============================================================================
 # Enums
@@ -97,27 +94,27 @@ class ModelMetadata:
     # Model info
     model_type: str = ""
     framework: str = "scikit-learn"
-    input_features: List[str] = field(default_factory=list)
+    input_features: list[str] = field(default_factory=list)
     output_type: str = "binary_classification"
 
     # Performance metrics
-    metrics: Dict[str, float] = field(default_factory=dict)
+    metrics: dict[str, float] = field(default_factory=dict)
 
     # Environment
     python_version: str = ""
-    dependencies: Dict[str, str] = field(default_factory=dict)
+    dependencies: dict[str, str] = field(default_factory=dict)
 
     # Tags
-    tags: Dict[str, str] = field(default_factory=dict)
+    tags: dict[str, str] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
     def to_json(self) -> str:
         return json.dumps(self.to_dict(), indent=2, ensure_ascii=False)
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "ModelMetadata":
+    def from_dict(cls, data: dict[str, Any]) -> ModelMetadata:
         return cls(**data)
 
 
@@ -140,15 +137,15 @@ class ModelVersion:
     updated_at: str = ""
 
     # Metadata
-    metadata: Optional[ModelMetadata] = None
+    metadata: ModelMetadata | None = None
 
     # Lineage
-    parent_version: Optional[str] = None
+    parent_version: str | None = None
 
     # Hash for integrity
     model_hash: str = ""
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         data = {
             "version_id": self.version_id,
             "model_name": self.model_name,
@@ -213,8 +210,8 @@ class ModelRegistry:
         self._auto_save = auto_save
 
         # In-memory registry
-        self._versions: Dict[str, ModelVersion] = {}
-        self._model_names: Dict[str, List[str]] = {}  # model_name -> [version_ids]
+        self._versions: dict[str, ModelVersion] = {}
+        self._model_names: dict[str, list[str]] = {}  # model_name -> [version_ids]
 
         # Thread safety
         self._lock = threading.RLock()
@@ -234,7 +231,7 @@ class ModelRegistry:
         """Load registry state from disk."""
         if self._registry_file.exists():
             try:
-                with open(self._registry_file, "r", encoding="utf-8") as f:
+                with open(self._registry_file, encoding="utf-8") as f:
                     data = json.load(f)
 
                 for version_data in data.get("versions", []):
@@ -302,12 +299,12 @@ class ModelRegistry:
         self,
         model: Any,
         name: str,
-        version: Optional[str] = None,
-        metrics: Optional[Dict[str, float]] = None,
+        version: str | None = None,
+        metrics: dict[str, float] | None = None,
         description: str = "",
-        tags: Optional[Dict[str, str]] = None,
-        input_features: Optional[List[str]] = None,
-        training_info: Optional[Dict[str, Any]] = None,
+        tags: dict[str, str] | None = None,
+        input_features: list[str] | None = None,
+        training_info: dict[str, Any] | None = None,
         auto_bump: str = "patch",
     ) -> ModelVersion:
         """
@@ -399,8 +396,8 @@ class ModelRegistry:
     def load_model(
         self,
         name: str,
-        version: Optional[str] = None,
-        stage: Optional[ModelStage] = None,
+        version: str | None = None,
+        stage: ModelStage | None = None,
     ) -> Any:
         """
         Load a model from registry.
@@ -445,7 +442,7 @@ class ModelRegistry:
     def transition_stage(
         self,
         version_id: str,
-        target_stage: Union[str, ModelStage],
+        target_stage: str | ModelStage,
     ) -> ModelVersion:
         """
         Transition a model version to a new stage.
@@ -490,8 +487,8 @@ class ModelRegistry:
     def list_versions(
         self,
         model_name: str,
-        stage: Optional[ModelStage] = None,
-    ) -> List[ModelVersion]:
+        stage: ModelStage | None = None,
+    ) -> list[ModelVersion]:
         """List all versions of a model."""
         with self._lock:
             version_ids = self._model_names.get(model_name, [])
@@ -502,11 +499,11 @@ class ModelRegistry:
 
             return sorted(versions, key=lambda v: v.created_at, reverse=True)
 
-    def list_models(self) -> List[str]:
+    def list_models(self) -> list[str]:
         """List all registered model names."""
         return list(self._model_names.keys())
 
-    def get_production_model(self, name: str) -> Optional[ModelVersion]:
+    def get_production_model(self, name: str) -> ModelVersion | None:
         """Get the current production version of a model."""
         versions = self.list_versions(name, stage=ModelStage.PRODUCTION)
         return versions[0] if versions else None
@@ -515,7 +512,7 @@ class ModelRegistry:
         self,
         version_id_1: str,
         version_id_2: str,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Compare two model versions."""
         v1 = self._versions.get(version_id_1)
         v2 = self._versions.get(version_id_2)
@@ -542,7 +539,7 @@ class ModelRegistry:
 
         return comparison
 
-    def rollback(self, model_name: str) -> Optional[ModelVersion]:
+    def rollback(self, model_name: str) -> ModelVersion | None:
         """
         Rollback to previous production version.
 
@@ -594,17 +591,17 @@ class ModelRegistry:
 
             return True
 
-    def get_version(self, version_id: str) -> Optional[ModelVersion]:
+    def get_version(self, version_id: str) -> ModelVersion | None:
         """Get a specific version."""
         return self._versions.get(version_id)
 
     def search(
         self,
-        model_name: Optional[str] = None,
-        stage: Optional[ModelStage] = None,
-        tags: Optional[Dict[str, str]] = None,
-        min_metric: Optional[Dict[str, float]] = None,
-    ) -> List[ModelVersion]:
+        model_name: str | None = None,
+        stage: ModelStage | None = None,
+        tags: dict[str, str] | None = None,
+        min_metric: dict[str, float] | None = None,
+    ) -> list[ModelVersion]:
         """Search for model versions matching criteria."""
         results = list(self._versions.values())
 
@@ -632,7 +629,7 @@ class ModelRegistry:
         return results
 
     @property
-    def stats(self) -> Dict[str, Any]:
+    def stats(self) -> dict[str, Any]:
         """Registry statistics."""
         return {
             "total_models": len(self._model_names),

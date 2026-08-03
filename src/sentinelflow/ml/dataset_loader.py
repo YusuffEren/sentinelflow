@@ -22,7 +22,6 @@ Usage:
 
 from __future__ import annotations
 
-import math
 import random
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -33,13 +32,9 @@ import pandas as pd
 from loguru import logger
 
 from sentinelflow.ml.feature_engine import (
-    TransactionFeatureEngine,
-    FEATURE_NAMES,
     NUM_FEATURES,
-    CITY_COORDS,
-    SUSPICIOUS_KEYWORDS,
+    TransactionFeatureEngine,
 )
-
 
 # =============================================================================
 # Constants

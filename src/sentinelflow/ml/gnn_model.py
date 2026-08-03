@@ -30,8 +30,7 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Optional
-import pickle
+from typing import Any
 
 import numpy as np
 from loguru import logger
@@ -50,8 +49,8 @@ except (ImportError, OSError):
 
 try:
     from torch_geometric.data import Data
-    from torch_geometric.nn import SAGEConv, GATConv, BatchNorm
-    from torch_geometric.utils import to_undirected, add_self_loops
+    from torch_geometric.nn import BatchNorm, GATConv, SAGEConv
+    from torch_geometric.utils import add_self_loops, to_undirected
 
     HAS_TORCH_GEOMETRIC = True
 except ImportError:
@@ -227,10 +226,7 @@ if HAS_TORCH and HAS_TORCH_GEOMETRIC:
             self.bns = nn.ModuleList()
 
             for i in range(num_layers):
-                if i == 0:
-                    in_ch = hidden_channels
-                else:
-                    in_ch = hidden_channels * num_heads
+                in_ch = hidden_channels if i == 0 else hidden_channels * num_heads
 
                 out_ch = hidden_channels if i < num_layers - 1 else out_channels
                 heads = num_heads if i < num_layers - 1 else 1
@@ -395,7 +391,7 @@ class GNNFraudModel:
             node_query = """
             MATCH (u:User)
             OPTIONAL MATCH (u)-[s:SENT]->()
-            WITH u, 
+            WITH u,
                  COUNT(s) as out_degree,
                  COALESCE(SUM(s.amount), 0) as total_sent,
                  COALESCE(AVG(s.amount), 0) as avg_sent
@@ -404,7 +400,7 @@ class GNNFraudModel:
                  COUNT(r) as in_degree,
                  COALESCE(SUM(r.amount), 0) as total_received,
                  COALESCE(AVG(r.amount), 0) as avg_received
-            RETURN 
+            RETURN
                 u.iban as iban,
                 u.name as name,
                 u.city as city,
@@ -422,7 +418,7 @@ class GNNFraudModel:
             # Get all edges
             edge_query = """
             MATCH (s:User)-[r:SENT]->(t:User)
-            RETURN 
+            RETURN
                 s.iban as source,
                 t.iban as target,
                 r.amount as amount,
@@ -554,7 +550,7 @@ class GNNFraudModel:
             return
 
         iban_to_idx = {iban: i for i, iban in enumerate(iban_list)}
-        idx_to_iban = {i: iban for i, iban in enumerate(iban_list)}
+        idx_to_iban = dict(enumerate(iban_list))
 
         self._graph_data = GraphData(
             node_features=node_features.astype(np.float32),

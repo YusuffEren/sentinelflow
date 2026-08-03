@@ -14,15 +14,15 @@ from pydantic import Field
 
 from sentinelflow.contracts.base import (
     ContractBase,
-    utc_now,
     generate_id,
+    utc_now,
 )
 from sentinelflow.contracts.enums import (
-    CaseStatus,
     CasePriority,
-    Severity,
-    FraudType,
+    CaseStatus,
     EventType,
+    FraudType,
+    Severity,
 )
 
 
@@ -119,7 +119,7 @@ class Case(ContractBase):
     last_note: str | None = None
 
     @classmethod
-    def from_create(cls, create: CaseCreate, **kwargs: Any) -> "Case":
+    def from_create(cls, create: CaseCreate, **kwargs: Any) -> Case:
         """Create Case from CaseCreate with additional fields."""
         data = create.model_dump()
         data["alert_count"] = len(data.get("alert_ids", []))

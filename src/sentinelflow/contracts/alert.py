@@ -15,10 +15,10 @@ from pydantic import Field
 from sentinelflow.contracts.base import (
     ContractBase,
     KafkaMessageBase,
-    utc_now,
     generate_id,
+    utc_now,
 )
-from sentinelflow.contracts.enums import FraudType, Severity, DetectorType
+from sentinelflow.contracts.enums import DetectorType, FraudType, Severity
 
 
 class Evidence(ContractBase):
@@ -151,7 +151,7 @@ class Alert(ContractBase):
     processing_time_ms: float = 0.0
 
     @classmethod
-    def from_create(cls, create: AlertCreate, **kwargs: Any) -> "Alert":
+    def from_create(cls, create: AlertCreate, **kwargs: Any) -> Alert:
         """Create Alert from AlertCreate with additional fields."""
         data = create.model_dump()
         data.update(kwargs)

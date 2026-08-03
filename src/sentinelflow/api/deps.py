@@ -7,9 +7,8 @@ FastAPI dependency injection utilities.
 
 from __future__ import annotations
 
-from typing import Generator
+from collections.abc import Generator
 
-from fastapi import Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from sentinelflow.database.postgres import get_session

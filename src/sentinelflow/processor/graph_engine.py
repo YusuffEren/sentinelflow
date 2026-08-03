@@ -31,16 +31,21 @@ Usage:
 from __future__ import annotations
 
 import os
+from collections.abc import Generator
 from contextlib import contextmanager
 from datetime import datetime, timezone
-from typing import Any, Generator, TypedDict
+from typing import Any, TypedDict
 
-from loguru import logger
-from neo4j import GraphDatabase, Driver, Session, ManagedTransaction
-from neo4j.exceptions import Neo4jError, ServiceUnavailable
+try:
+    from neo4j import Driver, GraphDatabase, Session
+    from neo4j.exceptions import Neo4jError, ServiceUnavailable
+    HAS_NEO4J = True
+except ImportError:
+    Driver = GraphDatabase = Session = None
+    Neo4jError = ServiceUnavailable = Exception
+    HAS_NEO4J = False
 
 from sentinelflow.config import get_settings
-
 
 # =============================================================================
 # Type Definitions
@@ -196,7 +201,7 @@ class GraphEngine:
             result = session.run(cypher, params or {})
             return [dict(record) for record in result]
 
-    def __enter__(self) -> "GraphEngine":
+    def __enter__(self) -> GraphEngine:
         return self
 
     def __exit__(self, *args: Any) -> None:
@@ -244,7 +249,7 @@ class GraphEngine:
             for constraint in constraints:
                 try:
                     session.run(constraint.strip())
-                    logger.debug(f"Constraint created/verified")
+                    logger.debug("Constraint created/verified")
                 except Neo4jError as e:
                     if "already exists" not in str(e).lower():
                         logger.warning(f"Constraint error: {e}")
@@ -252,7 +257,7 @@ class GraphEngine:
             for index in indexes:
                 try:
                     session.run(index.strip())
-                    logger.debug(f"Index created/verified")
+                    logger.debug("Index created/verified")
                 except Neo4jError as e:
                     if "already exists" not in str(e).lower():
                         logger.warning(f"Index error: {e}")
@@ -291,24 +296,24 @@ class GraphEngine:
         query = """
         // MERGE sender node
         MERGE (sender:User {iban: $sender_iban})
-        ON CREATE SET 
+        ON CREATE SET
             sender.name = $sender_name,
             sender.city = $sender_city,
             sender.created_at = datetime()
         ON MATCH SET
             sender.name = COALESCE($sender_name, sender.name),
             sender.city = COALESCE($sender_city, sender.city)
-        
+
         // MERGE receiver node
         MERGE (receiver:User {iban: $receiver_iban})
-        ON CREATE SET 
+        ON CREATE SET
             receiver.name = $receiver_name,
             receiver.city = $receiver_city,
             receiver.created_at = datetime()
         ON MATCH SET
             receiver.name = COALESCE($receiver_name, receiver.name),
             receiver.city = COALESCE($receiver_city, receiver.city)
-        
+
         // Create the SENT relationship
         CREATE (sender)-[r:SENT {
             transaction_id: $transaction_id,
@@ -319,7 +324,7 @@ class GraphEngine:
             ring_id: $ring_id,
             created_at: datetime()
         }]->(receiver)
-        
+
         RETURN elementId(r) as relationship_id
         """
 
@@ -362,13 +367,13 @@ class GraphEngine:
         """
         query = """
         UNWIND $transactions AS tx
-        
+
         MERGE (sender:User {iban: tx.sender_iban})
         ON CREATE SET sender.name = tx.sender_name, sender.city = tx.sender_city
-        
+
         MERGE (receiver:User {iban: tx.receiver_iban})
         ON CREATE SET receiver.name = tx.receiver_name, receiver.city = tx.receiver_city
-        
+
         CREATE (sender)-[:SENT {
             transaction_id: tx.transaction_id,
             amount: tx.amount,
@@ -377,7 +382,7 @@ class GraphEngine:
             fraud_type: tx.fraud_type,
             ring_id: tx.ring_id
         }]->(receiver)
-        
+
         RETURN count(*) AS created
         """
 
@@ -454,22 +459,22 @@ class GraphEngine:
         query = f"""
         // Find the starting user
         MATCH (start:User {{iban: $start_iban}})
-        
+
         // Look for circular paths of length min_hops to max_hops
         MATCH path = (start)-[rels:SENT*{min_hops}..{max_hops}]->(start)
-        
+
         // Filter by time window
-        WHERE ALL(r IN rels WHERE 
+        WHERE ALL(r IN rels WHERE
             r.timestamp > datetime() - duration({{hours: $time_window_hours}})
         )
-        
+
         // Extract path details
         WITH path, rels,
              [node IN nodes(path) | node.iban] AS ibans,
              [node IN nodes(path) | node.name] AS names,
              REDUCE(total = 0.0, r IN rels | total + r.amount) AS total_amount,
              length(path) AS ring_size
-        
+
         // Return unique rings (avoid duplicates from different starting points)
         RETURN DISTINCT
             ibans,
@@ -478,7 +483,7 @@ class GraphEngine:
             ring_size,
             [r IN rels | r.transaction_id] AS transaction_ids,
             [r IN rels | r.timestamp] AS timestamps
-        
+
         ORDER BY total_amount DESC
         LIMIT 100
         """
@@ -537,25 +542,25 @@ class GraphEngine:
         query = f"""
         // Find all circular paths in the graph
         MATCH path = (a:User)-[rels:SENT*{min_hops}..{max_hops}]->(a)
-        
+
         // Calculate totals
         WITH path, rels, a,
              [node IN nodes(path) | node.iban] AS ibans,
              REDUCE(total = 0.0, r IN rels | total + r.amount) AS total_amount,
              length(path) AS ring_size
-        
+
         // Filter by minimum amount
         WHERE total_amount >= $min_amount
-        
+
         // Get unique rings (use sorted IBANs as identifier)
         WITH ibans, total_amount, ring_size,
              apoc.coll.sort(ibans) AS sorted_ibans
-        
+
         RETURN DISTINCT
             sorted_ibans AS ibans,
             total_amount,
             ring_size
-        
+
         ORDER BY total_amount DESC
         LIMIT $limit
         """
@@ -641,7 +646,7 @@ class GraphEngine:
         """Get all transactions for a specific user."""
         query = """
         MATCH (u:User {iban: $iban})-[s:SENT]->(other:User)
-        RETURN 
+        RETURN
             u.iban AS sender_iban,
             u.name AS sender_name,
             other.iban AS receiver_iban,
@@ -651,11 +656,11 @@ class GraphEngine:
             s.transaction_id AS transaction_id
         ORDER BY s.timestamp DESC
         LIMIT $limit
-        
+
         UNION
-        
+
         MATCH (other:User)-[s:SENT]->(u:User {iban: $iban})
-        RETURN 
+        RETURN
             other.iban AS sender_iban,
             other.name AS sender_name,
             u.iban AS receiver_iban,
@@ -677,7 +682,7 @@ class GraphEngine:
         MATCH (u:User)
         WITH count(u) AS user_count
         MATCH ()-[s:SENT]->()
-        RETURN 
+        RETURN
             user_count,
             count(s) AS transaction_count,
             sum(s.amount) AS total_volume

@@ -23,7 +23,7 @@ import pandas as pd
 from loguru import logger
 
 try:
-    from confluent_kafka import Producer, KafkaException
+    from confluent_kafka import KafkaException, Producer
 
     HAS_KAFKA = True
 except ImportError:

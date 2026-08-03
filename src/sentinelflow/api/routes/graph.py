@@ -14,7 +14,7 @@ Endpoints:
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query
 from loguru import logger
@@ -30,36 +30,40 @@ router = APIRouter(prefix="/graph", tags=["Graph"])
 
 class GraphNode(BaseModel):
     """Node in the transaction graph."""
+
     id: str
     label: str
     group: int = Field(default=0, description="0=normal, 1=fraud, 2=suspicious")
     amount_total: float = 0.0
     tx_count: int = 0
-    city: Optional[str] = None
+    city: str | None = None
     is_fraud: bool = False
 
 
 class GraphEdge(BaseModel):
     """Edge (transaction) in the graph."""
+
     source: str
     target: str
     amount: float
     timestamp: str
-    color: Optional[str] = None
+    color: str | None = None
     is_fraud: bool = False
 
 
 class GraphData(BaseModel):
     """Complete graph data for visualization."""
-    nodes: List[GraphNode]
-    links: List[GraphEdge]
-    metadata: Dict[str, Any] = Field(default_factory=dict)
+
+    nodes: list[GraphNode]
+    links: list[GraphEdge]
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class FraudRing(BaseModel):
     """Detected fraud ring."""
+
     ring_id: str
-    accounts: List[str]
+    accounts: list[str]
     total_amount: float
     transaction_count: int
     detected_at: str
@@ -77,16 +81,17 @@ _graph_engine = None
 def get_graph_engine():
     """Get or create graph engine connection."""
     global _graph_engine
-    
+
     if _graph_engine is None:
         try:
             from sentinelflow.processor.graph_engine import GraphEngine
+
             _graph_engine = GraphEngine()
             logger.info("GraphEngine connected for API")
         except Exception as e:
             logger.warning(f"GraphEngine not available: {e}")
             return None
-    
+
     return _graph_engine
 
 
@@ -103,17 +108,17 @@ async def get_graph_data(
 ) -> GraphData:
     """
     Get transaction network graph data for visualization.
-    
+
     Returns nodes (accounts) and links (transactions) for force-directed graph.
     """
     engine = get_graph_engine()
-    
+
     if engine is None:
         return _generate_mock_graph_data(limit)
-    
+
     try:
         since = datetime.now(timezone.utc) - timedelta(hours=hours)
-        
+
         query = """
         MATCH (s:User)-[t:SENT]->(r:User)
         WHERE t.timestamp > $since
@@ -131,8 +136,8 @@ async def get_graph_data(
             params={"since": since.isoformat(), "limit": limit},
         )
 
-        nodes_map: Dict[str, GraphNode] = {}
-        edges: List[GraphEdge] = []
+        nodes_map: dict[str, GraphNode] = {}
+        edges: list[GraphEdge] = []
 
         for record in records:
             sender_id = record["sender"][:12] + "..."
@@ -159,27 +164,29 @@ async def get_graph_data(
 
             # fraud_type "none"/""/None değilse fraud olarak işaretle
             is_fraud = record.get("fraud_type") not in (None, "none", "")
-            
+
             if is_fraud:
                 nodes_map[sender_id].is_fraud = True
                 nodes_map[sender_id].group = 1
                 nodes_map[receiver_id].is_fraud = True
                 nodes_map[receiver_id].group = 1
-            
-            edges.append(GraphEdge(
-                source=sender_id,
-                target=receiver_id,
-                amount=record["amount"],
-                timestamp=str(record["timestamp"]),
-                color="#ef4444" if is_fraud else "#334155",
-                is_fraud=is_fraud,
-            ))
-        
+
+            edges.append(
+                GraphEdge(
+                    source=sender_id,
+                    target=receiver_id,
+                    amount=record["amount"],
+                    timestamp=str(record["timestamp"]),
+                    color="#ef4444" if is_fraud else "#334155",
+                    is_fraud=is_fraud,
+                )
+            )
+
         if include_fraud_only:
             fraud_nodes = {n.id for n in nodes_map.values() if n.is_fraud}
             edges = [e for e in edges if e.source in fraud_nodes or e.target in fraud_nodes]
             nodes_map = {k: v for k, v in nodes_map.items() if k in fraud_nodes}
-        
+
         return GraphData(
             nodes=list(nodes_map.values()),
             links=edges,
@@ -188,31 +195,31 @@ async def get_graph_data(
                 "total_edges": len(edges),
                 "fraud_nodes": sum(1 for n in nodes_map.values() if n.is_fraud),
                 "time_range_hours": hours,
-            }
+            },
         )
-        
+
     except Exception as e:
         logger.error(f"Graph query failed: {e}")
         return _generate_mock_graph_data(limit)
 
 
-@router.get("/rings", response_model=List[FraudRing])
+@router.get("/rings", response_model=list[FraudRing])
 async def get_fraud_rings(
     min_depth: int = Query(default=3, ge=2, le=10),
     max_depth: int = Query(default=6, ge=3, le=10),
     limit: int = Query(default=10, ge=1, le=50),
-) -> List[FraudRing]:
+) -> list[FraudRing]:
     """
     Get detected fraud rings (circular transaction patterns).
     """
     engine = get_graph_engine()
-    
+
     if engine is None:
         return _generate_mock_rings(limit)
-    
+
     try:
         rings = engine.detect_all_rings(min_hops=min_depth, max_hops=max_depth, limit=limit)
-        
+
         return [
             FraudRing(
                 ring_id=ring["ring_id"],
@@ -224,7 +231,7 @@ async def get_fraud_rings(
             )
             for ring in rings[:limit]
         ]
-        
+
     except Exception as e:
         logger.error(f"Ring detection failed: {e}")
         return _generate_mock_rings(limit)
@@ -239,10 +246,10 @@ async def get_account_network(
     Get transaction network centered on a specific account.
     """
     engine = get_graph_engine()
-    
+
     if engine is None:
         raise HTTPException(status_code=503, detail="Graph database not available")
-    
+
     try:
         # SAFETY: `depth` FastAPI Query(ge=1, le=4) ile int olarak doğrulanmıştır.
         # Neo4j değişken desen derinliğini parametrize etmeyi desteklemediği için f-string gereklidir.
@@ -257,50 +264,52 @@ async def get_account_network(
         """
 
         records = engine.query(cypher=query, params={"iban": iban})
-        
+
         if not records:
             raise HTTPException(status_code=404, detail=f"Account {iban} not found")
-        
-        nodes_map: Dict[str, GraphNode] = {}
-        edges: List[GraphEdge] = []
-        
+
+        nodes_map: dict[str, GraphNode] = {}
+        edges: list[GraphEdge] = []
+
         for record in records:
             sender_id = record["sender"][:12] + "..."
             receiver_id = record["receiver"][:12] + "..."
-            
+
             is_center = record["sender"] == iban or record["receiver"] == iban
-            
+
             if sender_id not in nodes_map:
                 nodes_map[sender_id] = GraphNode(
                     id=sender_id,
                     label=record["sender_name"] or sender_id,
                     group=2 if record["sender"] == iban else 0,
                 )
-            
+
             if receiver_id not in nodes_map:
                 nodes_map[receiver_id] = GraphNode(
                     id=receiver_id,
                     label=record["receiver_name"] or receiver_id,
                     group=2 if record["receiver"] == iban else 0,
                 )
-            
-            edges.append(GraphEdge(
-                source=sender_id,
-                target=receiver_id,
-                amount=record["amount"],
-                timestamp=str(record["timestamp"]),
-                color="#3b82f6" if is_center else "#334155",
-            ))
-        
+
+            edges.append(
+                GraphEdge(
+                    source=sender_id,
+                    target=receiver_id,
+                    amount=record["amount"],
+                    timestamp=str(record["timestamp"]),
+                    color="#3b82f6" if is_center else "#334155",
+                )
+            )
+
         return GraphData(
             nodes=list(nodes_map.values()),
             links=edges,
             metadata={
                 "center_account": iban,
                 "depth": depth,
-            }
+            },
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -316,69 +325,75 @@ async def get_account_network(
 def _generate_mock_graph_data(limit: int = 100) -> GraphData:
     """Generate mock graph data when Neo4j is not available."""
     import random
-    
+
     nodes = []
     edges = []
-    
+
     n_accounts = min(limit // 2, 50)
-    
+
     for i in range(n_accounts):
         is_fraud = random.random() < 0.1
-        nodes.append(GraphNode(
-            id=f"ACC{i:04d}",
-            label=f"Account {i}",
-            group=1 if is_fraud else (2 if random.random() < 0.3 else 0),
-            amount_total=random.uniform(1000, 100000),
-            tx_count=random.randint(1, 20),
-            is_fraud=is_fraud,
-        ))
-    
+        nodes.append(
+            GraphNode(
+                id=f"ACC{i:04d}",
+                label=f"Account {i}",
+                group=1 if is_fraud else (2 if random.random() < 0.3 else 0),
+                amount_total=random.uniform(1000, 100000),
+                tx_count=random.randint(1, 20),
+                is_fraud=is_fraud,
+            )
+        )
+
     for i in range(min(limit, 100)):
         source_idx = random.randint(0, n_accounts - 1)
         target_idx = random.randint(0, n_accounts - 1)
-        
+
         if source_idx == target_idx:
             continue
-        
+
         is_fraud = nodes[source_idx].is_fraud or nodes[target_idx].is_fraud
-        
-        edges.append(GraphEdge(
-            source=f"ACC{source_idx:04d}",
-            target=f"ACC{target_idx:04d}",
-            amount=random.uniform(100, 50000),
-            timestamp=datetime.now(timezone.utc).isoformat(),
-            color="#ef4444" if is_fraud else "#334155",
-            is_fraud=is_fraud,
-        ))
-    
+
+        edges.append(
+            GraphEdge(
+                source=f"ACC{source_idx:04d}",
+                target=f"ACC{target_idx:04d}",
+                amount=random.uniform(100, 50000),
+                timestamp=datetime.now(timezone.utc).isoformat(),
+                color="#ef4444" if is_fraud else "#334155",
+                is_fraud=is_fraud,
+            )
+        )
+
     return GraphData(
         nodes=nodes,
         links=edges,
         metadata={
             "is_mock": True,
             "message": "Neo4j not connected, showing mock data",
-        }
+        },
     )
 
 
-def _generate_mock_rings(limit: int = 10) -> List[FraudRing]:
+def _generate_mock_rings(limit: int = 10) -> list[FraudRing]:
     """Generate mock fraud rings."""
     import random
-    
+
     rings = []
-    
+
     for i in range(limit):
         ring_size = random.randint(3, 6)
         accounts = [f"ACC{random.randint(0, 99):04d}" for _ in range(ring_size)]
         accounts.append(accounts[0])
-        
-        rings.append(FraudRing(
-            ring_id=f"RING-{i:04d}",
-            accounts=accounts,
-            total_amount=random.uniform(50000, 500000),
-            transaction_count=ring_size,
-            detected_at=datetime.now(timezone.utc).isoformat(),
-            severity=random.choice(["high", "critical"]),
-        ))
-    
+
+        rings.append(
+            FraudRing(
+                ring_id=f"RING-{i:04d}",
+                accounts=accounts,
+                total_amount=random.uniform(50000, 500000),
+                transaction_count=ring_size,
+                detected_at=datetime.now(timezone.utc).isoformat(),
+                severity=random.choice(["high", "critical"]),
+            )
+        )
+
     return rings

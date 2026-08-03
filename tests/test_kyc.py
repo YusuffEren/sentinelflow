@@ -1,6 +1,5 @@
 # SentinelFlow - KYC Module Tests
 
-import pytest
 from datetime import datetime, timedelta
 
 

@@ -26,12 +26,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Any
+
 import numpy as np
 from loguru import logger
 
-from sentinelflow.ml.federated.server import FederatedServer, FederatedHistory
 from sentinelflow.ml.federated.client import FederatedClient
-
+from sentinelflow.ml.federated.server import FederatedHistory, FederatedServer
 
 # =============================================================================
 # Data Structures
@@ -70,7 +70,7 @@ class SimulationResult:
             "=" * 60,
             "FEDERATED LEARNING SIMULATION RESULTS",
             "=" * 60,
-            f"\nFederated Learning:",
+            "\nFederated Learning:",
             f"  Final Accuracy: {self.final_metrics.get('accuracy', 0):.4f}",
             f"  Final AUC: {self.final_metrics.get('auc', 0):.4f}",
             f"  Final F1: {self.final_metrics.get('f1', 0):.4f}",
@@ -79,7 +79,7 @@ class SimulationResult:
         if self.centralized_metrics:
             lines.extend(
                 [
-                    f"\nCentralized Training (baseline):",
+                    "\nCentralized Training (baseline):",
                     f"  Accuracy: {self.centralized_metrics.get('accuracy', 0):.4f}",
                     f"  AUC: {self.centralized_metrics.get('auc', 0):.4f}",
                     f"  F1: {self.centralized_metrics.get('f1', 0):.4f}",
@@ -95,7 +95,7 @@ class SimulationResult:
 
         lines.extend(
             [
-                f"\nPrivacy Guarantees:",
+                "\nPrivacy Guarantees:",
                 f"  Raw data shared: {self.privacy_analysis.get('data_shared', 'None')}",
                 f"  Parameters exchanged: {self.privacy_analysis.get('params_exchanged', 0):,}",
                 "=" * 60,
@@ -376,7 +376,7 @@ class FederatedSimulator:
         # Evaluate final model
         final_metrics = self._server.evaluate_global(self._X_test, self._y_test)
 
-        logger.info(f"\nFinal federated model metrics:")
+        logger.info("\nFinal federated model metrics:")
         logger.info(f"  Accuracy: {final_metrics.get('accuracy', 0):.4f}")
         logger.info(f"  AUC: {final_metrics.get('auc', 0):.4f}")
         logger.info(f"  Precision: {final_metrics.get('precision', 0):.4f}")
@@ -455,7 +455,7 @@ class FederatedSimulator:
             total_epochs = self.config.epochs_per_round * 10  # Approximate
 
             model.train()
-            for epoch in range(total_epochs):
+            for _epoch in range(total_epochs):
                 for batch_X, batch_y in loader:
                     optimizer.zero_grad()
                     loss = criterion(model(batch_X), batch_y)
@@ -556,7 +556,7 @@ class FederatedSimulator:
             clients = list(result.client_metrics.keys())
             accuracies = [result.client_metrics[c].get("accuracy", 0) for c in clients]
 
-            bars = ax3.bar(range(len(clients)), accuracies)
+            ax3.bar(range(len(clients)), accuracies)
             ax3.set_xticks(range(len(clients)))
             ax3.set_xticklabels(clients, rotation=45, ha="right")
             ax3.set_ylabel("Accuracy")

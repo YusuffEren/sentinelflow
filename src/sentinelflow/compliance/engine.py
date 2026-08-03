@@ -24,7 +24,6 @@ from typing import Any
 
 from loguru import logger
 
-
 # =============================================================================
 # Constants
 # =============================================================================
@@ -311,7 +310,7 @@ class ComplianceEngine:
         sender_iban = tx_data.get("sender_iban", "")
         sender_name = tx_data.get("sender_name", "")
         receiver_name = tx_data.get("receiver_name", "")
-        description = tx_data.get("description", "")
+        tx_data.get("description", "")
         sender_city = tx_data.get("sender_city", "")
         receiver_city = tx_data.get("receiver_city", "")
 
@@ -335,7 +334,7 @@ class ComplianceEngine:
                 ComplianceViolation(
                     rule=ComplianceRule.MASAK_CASH_SINGLE,
                     severity=RiskLevel.HIGH,
-                    message=f"İşlem tutarı MASAK nakit bildirim eşiğini aşıyor",
+                    message="İşlem tutarı MASAK nakit bildirim eşiğini aşıyor",
                     threshold=self._thresholds["cash_single_report"],
                     actual_value=amount,
                 )
@@ -352,7 +351,7 @@ class ComplianceEngine:
                 ComplianceViolation(
                     rule=ComplianceRule.MASAK_WIRE_HIGH,
                     severity=RiskLevel.HIGH,
-                    message=f"Yüksek tutarlı havale/EFT işlemi",
+                    message="Yüksek tutarlı havale/EFT işlemi",
                     threshold=self._thresholds["wire_high_risk"],
                     actual_value=amount,
                 )
@@ -419,7 +418,7 @@ class ComplianceEngine:
                 ComplianceViolation(
                     rule=ComplianceRule.MASAK_STRUCTURING,
                     severity=RiskLevel.MEDIUM,
-                    message=f"Parçalama şüphesi: Tutar bildirim eşiğinin hemen altında",
+                    message="Parçalama şüphesi: Tutar bildirim eşiğinin hemen altında",
                     threshold=structuring_threshold,
                     actual_value=amount,
                 )

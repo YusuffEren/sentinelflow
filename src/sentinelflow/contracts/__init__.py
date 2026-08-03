@@ -17,41 +17,41 @@ Schema versioning: All messages include `schema_version` field.
 Current version: 1.0.0
 """
 
-from sentinelflow.contracts.enums import (
-    FraudType,
-    Severity,
-    CaseStatus,
-    CasePriority,
-    EventType,
-)
-from sentinelflow.contracts.transaction import (
-    TransactionCreate,
-    TransactionSummary,
-    TransactionKafkaMessage,
-)
 from sentinelflow.contracts.alert import (
-    AlertCreate,
     Alert,
+    AlertCreate,
     AlertKafkaMessage,
     Evidence,
 )
+from sentinelflow.contracts.base import SCHEMA_VERSION
 from sentinelflow.contracts.case import (
-    CaseCreate,
     Case,
+    CaseCreate,
     CaseEvent,
 )
+from sentinelflow.contracts.enums import (
+    CasePriority,
+    CaseStatus,
+    EventType,
+    FraudType,
+    Severity,
+)
+from sentinelflow.contracts.transaction import (
+    TransactionCreate,
+    TransactionKafkaMessage,
+    TransactionSummary,
+)
 from sentinelflow.contracts.user import (
+    LoginRequest,
+    TokenPayload,
+    TokenResponse,
+    User,
+    UserCreate,
+    UserPublic,
     UserRole,
     UserStatus,
-    UserCreate,
-    User,
-    UserPublic,
     UserUpdate,
-    LoginRequest,
-    TokenResponse,
-    TokenPayload,
 )
-from sentinelflow.contracts.base import SCHEMA_VERSION
 
 __all__ = [
     # Version

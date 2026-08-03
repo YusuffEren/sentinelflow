@@ -17,17 +17,15 @@ ederek %99.5+ doğruluk hedefi.
 
 from __future__ import annotations
 
-import asyncio
-from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional, Set, Tuple
-from enum import Enum
+from dataclasses import dataclass
+from datetime import datetime, timezone
+from typing import Any
 
 import numpy as np
 from loguru import logger
 
 try:
-    from neo4j import GraphDatabase, Driver
+    from neo4j import Driver, GraphDatabase
 
     HAS_NEO4J = True
 except ImportError:
@@ -47,7 +45,7 @@ except ImportError:
 # Constants
 # =============================================================================
 
-GRAPH_FEATURE_NAMES: List[str] = [
+GRAPH_FEATURE_NAMES: list[str] = [
     # Centrality features (5)
     "pagerank_score",
     "betweenness_centrality",
@@ -119,7 +117,7 @@ class GraphNodeProfile:
     ring_count: int = 0
     ring_total_amount: float = 0.0
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "iban": self.iban,
             "pagerank": round(self.pagerank, 6),
@@ -189,10 +187,10 @@ class GraphFeatureEngine:
         self._password = neo4j_password
         self._cache_ttl = cache_ttl_seconds
 
-        self._driver: Optional[Driver] = None
-        self._feature_cache: Dict[str, Tuple[Dict, datetime]] = {}
-        self._community_cache: Dict[int, Set[str]] = {}
-        self._fraud_nodes: Set[str] = set()
+        self._driver: Driver | None = None
+        self._feature_cache: dict[str, tuple[dict, datetime]] = {}
+        self._community_cache: dict[int, set[str]] = {}
+        self._fraud_nodes: set[str] = set()
 
         self._connect()
         logger.info(f"GraphFeatureEngine initialized (uri={neo4j_uri})")
@@ -217,7 +215,7 @@ class GraphFeatureEngine:
             logger.error(f"Failed to connect to Neo4j: {e}")
             self._driver = None
 
-    def extract_features(self, iban: str) -> Dict[str, float]:
+    def extract_features(self, iban: str) -> dict[str, float]:
         """
         Extract graph features for a given IBAN.
 
@@ -233,7 +231,7 @@ class GraphFeatureEngine:
             if (datetime.now(timezone.utc) - timestamp).seconds < self._cache_ttl:
                 return cached
 
-        features: Dict[str, float] = {name: 0.0 for name in GRAPH_FEATURE_NAMES}
+        features: dict[str, float] = dict.fromkeys(GRAPH_FEATURE_NAMES, 0.0)
 
         if not self._driver:
             return features
@@ -285,7 +283,7 @@ class GraphFeatureEngine:
         self,
         session: Any,
         iban: str,
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         """Get centrality-based features."""
         features = {}
 
@@ -298,7 +296,7 @@ class GraphFeatureEngine:
         WITH u, out_deg, COUNT(r2) as in_deg
         MATCH (total:User)
         WITH out_deg, in_deg, COUNT(total) as total_nodes
-        RETURN 
+        RETURN
             out_deg,
             in_deg,
             toFloat(out_deg + in_deg) / (total_nodes - 1) as degree_centrality
@@ -349,7 +347,7 @@ class GraphFeatureEngine:
         self,
         session: Any,
         iban: str,
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         """Get community-based features."""
         features = {}
 
@@ -358,7 +356,7 @@ class GraphFeatureEngine:
         MATCH (u:User {iban: $iban})
         OPTIONAL MATCH (u)-[:SENT*1..3]-(connected:User)
         WITH u, COLLECT(DISTINCT connected.iban) + [u.iban] as community_members
-        RETURN 
+        RETURN
             SIZE(community_members) as community_size,
             SIZE([m IN community_members WHERE m STARTS WITH 'FRAUD_']) as fraud_in_community
         """
@@ -380,7 +378,7 @@ class GraphFeatureEngine:
         MATCH (u:User {iban: $iban})-[r:SENT]-(other:User)
         OPTIONAL MATCH (u)-[:SENT*1..2]-(community:User)
         WITH u, other, COLLECT(DISTINCT community.iban) as community_members
-        RETURN 
+        RETURN
             COUNT(CASE WHEN other.iban IN community_members THEN 1 END) as intra,
             COUNT(CASE WHEN NOT other.iban IN community_members THEN 1 END) as inter
         """
@@ -406,16 +404,16 @@ class GraphFeatureEngine:
         self,
         session: Any,
         iban: str,
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         """Get path-based features including ring detection."""
         features = {}
 
         # Ring participation (circular transaction patterns)
         ring_query = """
         MATCH path = (u:User {iban: $iban})-[:SENT*2..6]->(u)
-        WITH path, 
+        WITH path,
              REDUCE(total = 0, r IN relationships(path) | total + r.amount) as ring_amount
-        RETURN 
+        RETURN
             COUNT(path) as ring_count,
             SUM(ring_amount) as total_ring_amount
         """
@@ -483,12 +481,12 @@ class GraphFeatureEngine:
         WITH u, n1, n2, neighbors
         WHERE n1 <> n2
         OPTIONAL MATCH (n1)-[:SENT]-(n2)
-        WITH u, COUNT(n1) as possible_connections, 
+        WITH u, COUNT(n1) as possible_connections,
              COUNT((n1)-[:SENT]-(n2)) as actual_connections,
              SIZE(neighbors) as neighbor_count
-        RETURN 
-            CASE WHEN possible_connections > 0 
-            THEN toFloat(actual_connections) / possible_connections 
+        RETURN
+            CASE WHEN possible_connections > 0
+            THEN toFloat(actual_connections) / possible_connections
             ELSE 0 END as clustering_coef
         """
 
@@ -510,7 +508,7 @@ class GraphFeatureEngine:
         self,
         session: Any,
         iban: str,
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         """Get neighborhood-based features."""
         features = {}
 
@@ -525,7 +523,7 @@ class GraphFeatureEngine:
              COUNT(DISTINCT n2) as neighbor_2hop,
              AVG(r.amount) as avg_neighbor_amount,
              SUM(CASE WHEN neighbor.is_fraud = true THEN 1 ELSE 0 END) as fraud_neighbors
-        RETURN 
+        RETURN
             neighbor_1hop,
             neighbor_2hop,
             avg_neighbor_amount,
@@ -550,7 +548,7 @@ class GraphFeatureEngine:
         # Neighbor diversity (unique countries/cities/banks)
         diversity_query = """
         MATCH (u:User {iban: $iban})-[:SENT]-(neighbor:User)
-        RETURN 
+        RETURN
             COUNT(DISTINCT neighbor.city) as unique_cities,
             COUNT(DISTINCT SUBSTRING(neighbor.iban, 0, 4)) as unique_banks
         """
@@ -573,7 +571,7 @@ class GraphFeatureEngine:
         self,
         session: Any,
         iban: str,
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         """Get time-windowed graph features."""
         features = {}
 
@@ -601,9 +599,9 @@ class GraphFeatureEngine:
         MATCH (u:User {iban: $iban})-[r2:SENT]->()
         WHERE r2.timestamp > datetime() - duration('P7D')
         WITH last_hour_edges, COUNT(r2) as week_edges
-        RETURN 
+        RETURN
             last_hour_edges,
-            CASE WHEN week_edges > 0 
+            CASE WHEN week_edges > 0
             THEN toFloat(last_hour_edges) / (week_edges / (7.0 * 24.0))
             ELSE 0 END as burst_ratio
         """
@@ -640,7 +638,7 @@ class GraphFeatureEngine:
         self,
         session: Any,
         iban: str,
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         """Get risk propagation features."""
         features = {}
 
@@ -651,11 +649,11 @@ class GraphFeatureEngine:
         WHERE fraud.is_fraud = true
         WITH u, path, LENGTH(path) as distance
         WITH u, COLLECT({distance: distance}) as fraud_paths
-        WITH u, 
+        WITH u,
              SIZE([p IN fraud_paths WHERE p.distance = 1]) as fraud_1hop,
              SIZE([p IN fraud_paths WHERE p.distance = 2]) as fraud_2hop,
              SIZE([p IN fraud_paths WHERE p.distance = 3]) as fraud_3hop
-        RETURN 
+        RETURN
             fraud_1hop * 1.0 + fraud_2hop * 0.5 + fraud_3hop * 0.25 as risk_score,
             CASE WHEN fraud_1hop > 0 THEN 1.0
                  WHEN fraud_2hop > 0 THEN 0.5
@@ -708,7 +706,7 @@ class GraphFeatureEngine:
         logger.info("Feature cache cleared")
 
     @staticmethod
-    def get_feature_names() -> List[str]:
+    def get_feature_names() -> list[str]:
         """Return ordered feature names."""
         return GRAPH_FEATURE_NAMES.copy()
 
@@ -744,7 +742,7 @@ class InMemoryGraphFeatureEngine:
         else:
             self._graph = nx.DiGraph()
 
-        self._node_labels: Dict[str, bool] = {}  # iban -> is_fraud
+        self._node_labels: dict[str, bool] = {}  # iban -> is_fraud
         logger.info("InMemoryGraphFeatureEngine initialized")
 
     def add_transaction(
@@ -771,9 +769,9 @@ class InMemoryGraphFeatureEngine:
             self._node_labels[sender] = True
             self._node_labels[receiver] = True
 
-    def extract_features(self, iban: str) -> Dict[str, float]:
+    def extract_features(self, iban: str) -> dict[str, float]:
         """Extract graph features using NetworkX."""
-        features: Dict[str, float] = {name: 0.0 for name in GRAPH_FEATURE_NAMES}
+        features: dict[str, float] = dict.fromkeys(GRAPH_FEATURE_NAMES, 0.0)
 
         if self._graph is None or iban not in self._graph:
             return features

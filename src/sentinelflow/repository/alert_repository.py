@@ -14,18 +14,16 @@ Features:
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Any, Optional, Sequence
+from typing import Any
 from uuid import uuid4
 
-from sqlalchemy import select, func, and_, or_, desc, update
-from sqlalchemy.orm import Session
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.dialects.postgresql import insert as pg_insert
 from loguru import logger
+from sqlalchemy import and_, desc, func, select, update
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Session
 
-from sentinelflow.database.models import AlertModel, CaseModel
 from sentinelflow.contracts import Alert, AlertCreate, FraudType, Severity
-from sentinelflow.contracts.alert import Evidence
+from sentinelflow.database.models import AlertModel
 
 
 def generate_alert_id() -> str:
@@ -72,7 +70,6 @@ class AlertRepository:
             alert_data = AlertCreate(**alert_data)
 
         # Use transaction_id as idempotency key if not provided
-        idem_key = idempotency_key or alert_data.transaction_id
 
         # Check for existing alert with same idempotency key (within recent window)
         existing = self._check_duplicate_sync(alert_data.transaction_id, alert_data.fraud_type)

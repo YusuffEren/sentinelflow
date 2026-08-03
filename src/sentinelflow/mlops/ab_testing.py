@@ -44,12 +44,11 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any
 
 import numpy as np
-from scipy import stats
 from loguru import logger
-
+from scipy import stats
 
 # =============================================================================
 # Enums
@@ -103,7 +102,7 @@ class Variant:
     failures: int = 0
 
     # Performance metrics
-    metrics: Dict[str, List[float]] = field(default_factory=dict)
+    metrics: dict[str, list[float]] = field(default_factory=dict)
 
     # Metadata
     model_version: str = ""
@@ -121,7 +120,7 @@ class Variant:
         """Alias for success rate."""
         return self.success_rate
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "name": self.name,
             "traffic_percentage": self.traffic_percentage,
@@ -144,7 +143,7 @@ class ABTest:
     description: str = ""
 
     # Variants
-    variants: List[Variant] = field(default_factory=list)
+    variants: list[Variant] = field(default_factory=list)
     control_variant: str = ""  # Name of control variant
 
     # Configuration
@@ -166,16 +165,16 @@ class ABTest:
     max_duration_hours: int = 168  # 7 days
 
     # Tags
-    tags: Dict[str, str] = field(default_factory=dict)
+    tags: dict[str, str] = field(default_factory=dict)
 
-    def get_variant(self, name: str) -> Optional[Variant]:
+    def get_variant(self, name: str) -> Variant | None:
         """Get variant by name."""
         for v in self.variants:
             if v.name == name:
                 return v
         return None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "test_id": self.test_id,
             "name": self.name,
@@ -206,7 +205,7 @@ class ABTestResult:
 
     # Statistics
     p_value: float = 1.0
-    confidence_interval: Tuple[float, float] = (0.0, 0.0)
+    confidence_interval: tuple[float, float] = (0.0, 0.0)
     effect_size: float = 0.0
 
     # Variant metrics
@@ -226,7 +225,7 @@ class ABTestResult:
     recommendation: str = ""
     can_conclude: bool = False
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "test_id": self.test_id,
             "timestamp": self.timestamp,
@@ -287,10 +286,10 @@ class ABTestManager:
         self._manager_file = self._storage_path / "manager.json"
 
         # In-memory state
-        self._tests: Dict[str, ABTest] = {}
+        self._tests: dict[str, ABTest] = {}
 
         # Multi-armed bandit state
-        self._bandit_state: Dict[str, Dict[str, Tuple[int, int]]] = (
+        self._bandit_state: dict[str, dict[str, tuple[int, int]]] = (
             {}
         )  # test_id -> variant -> (successes, trials)
 
@@ -312,7 +311,7 @@ class ABTestManager:
         """Load manager state from disk."""
         if self._manager_file.exists():
             try:
-                with open(self._manager_file, "r", encoding="utf-8") as f:
+                with open(self._manager_file, encoding="utf-8") as f:
                     data = json.load(f)
 
                 for test_data in data.get("tests", []):
@@ -346,13 +345,13 @@ class ABTestManager:
     def create_test(
         self,
         name: str,
-        variants: List[Dict[str, Any]],
+        variants: list[dict[str, Any]],
         description: str = "",
         split_strategy: SplitStrategy = SplitStrategy.USER_HASH,
         confidence_level: float = 0.95,
         min_sample_size: int = 1000,
         auto_start: bool = False,
-        tags: Optional[Dict[str, str]] = None,
+        tags: dict[str, str] | None = None,
     ) -> ABTest:
         """
         Create a new A/B test.
@@ -462,7 +461,7 @@ class ABTestManager:
     def get_variant(
         self,
         test_id: str,
-        user_id: Optional[str] = None,
+        user_id: str | None = None,
     ) -> Variant:
         """
         Get variant for a user.
@@ -538,7 +537,7 @@ class ABTestManager:
         variant_name: str,
         success: bool,
         metric_name: str = "conversion",
-        metric_value: Optional[float] = None,
+        metric_value: float | None = None,
     ) -> None:
         """
         Log outcome for a variant.
@@ -681,7 +680,7 @@ class ABTestManager:
                 else:
                     result.result = TestResult.CONTROL_WINS
                     result.recommendation = (
-                        f"Control variant is significantly better. " f"Keep current model."
+                        "Control variant is significantly better. " "Keep current model."
                     )
                 result.can_conclude = True
             else:
@@ -698,14 +697,14 @@ class ABTestManager:
 
         return result
 
-    def get_test(self, test_id: str) -> Optional[ABTest]:
+    def get_test(self, test_id: str) -> ABTest | None:
         """Get test by ID."""
         return self._tests.get(test_id)
 
     def list_tests(
         self,
-        status: Optional[TestStatus] = None,
-    ) -> List[ABTest]:
+        status: TestStatus | None = None,
+    ) -> list[ABTest]:
         """List all tests."""
         tests = list(self._tests.values())
 
@@ -734,7 +733,7 @@ class ABTestManager:
             return True
 
     @property
-    def stats(self) -> Dict[str, Any]:
+    def stats(self) -> dict[str, Any]:
         """Manager statistics."""
         return {
             "total_tests": len(self._tests),

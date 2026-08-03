@@ -33,9 +33,8 @@ import json
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
-import numpy as np
 import pandas as pd
 from loguru import logger
 
@@ -60,7 +59,7 @@ class ModelCard:
     model_version: str = "1.0.0"
     model_type: str = ""
     description: str = ""
-    developers: List[str] = field(default_factory=list)
+    developers: list[str] = field(default_factory=list)
     license: str = "Proprietary"
 
     # Dates
@@ -68,13 +67,13 @@ class ModelCard:
     last_updated: str = ""
 
     # Intended Use
-    primary_intended_uses: List[str] = field(default_factory=list)
-    primary_intended_users: List[str] = field(default_factory=list)
-    out_of_scope_uses: List[str] = field(default_factory=list)
+    primary_intended_uses: list[str] = field(default_factory=list)
+    primary_intended_users: list[str] = field(default_factory=list)
+    out_of_scope_uses: list[str] = field(default_factory=list)
 
     # Factors
-    relevant_factors: List[str] = field(default_factory=list)
-    evaluation_factors: List[str] = field(default_factory=list)
+    relevant_factors: list[str] = field(default_factory=list)
+    evaluation_factors: list[str] = field(default_factory=list)
 
     # Training Data
     training_dataset: str = ""
@@ -89,22 +88,22 @@ class ModelCard:
     evaluation_data_size: int = 0
 
     # Quantitative Analysis
-    metrics: Dict[str, float] = field(default_factory=dict)
-    performance_by_group: Dict[str, Dict[str, float]] = field(default_factory=dict)
-    confidence_intervals: Dict[str, tuple] = field(default_factory=dict)
+    metrics: dict[str, float] = field(default_factory=dict)
+    performance_by_group: dict[str, dict[str, float]] = field(default_factory=dict)
+    confidence_intervals: dict[str, tuple] = field(default_factory=dict)
 
     # Ethical Considerations
-    ethical_considerations: List[str] = field(default_factory=list)
-    fairness_analysis: Dict[str, Any] = field(default_factory=dict)
+    ethical_considerations: list[str] = field(default_factory=list)
+    fairness_analysis: dict[str, Any] = field(default_factory=dict)
 
     # Caveats and Recommendations
-    caveats: List[str] = field(default_factory=list)
-    recommendations: List[str] = field(default_factory=list)
+    caveats: list[str] = field(default_factory=list)
+    recommendations: list[str] = field(default_factory=list)
 
     # Additional Info
-    additional_info: Dict[str, Any] = field(default_factory=dict)
+    additional_info: dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         return {
             "model_details": {
@@ -152,7 +151,7 @@ class ModelCard:
             "additional_info": self.additional_info,
         }
 
-    def to_json(self, filepath: Optional[str] = None) -> str:
+    def to_json(self, filepath: str | None = None) -> str:
         """Export to JSON."""
         json_str = json.dumps(self.to_dict(), indent=2, ensure_ascii=False)
 
@@ -161,7 +160,7 @@ class ModelCard:
 
         return json_str
 
-    def to_markdown(self, filepath: Optional[str] = None) -> str:
+    def to_markdown(self, filepath: str | None = None) -> str:
         """Export to Markdown."""
         md = []
 
@@ -287,9 +286,9 @@ class ModelCard:
 def generate_model_card(
     model: Any,
     model_name: str,
-    training_data: Optional[pd.DataFrame] = None,
-    test_data: Optional[pd.DataFrame] = None,
-    metrics: Optional[Dict[str, float]] = None,
+    training_data: pd.DataFrame | None = None,
+    test_data: pd.DataFrame | None = None,
+    metrics: dict[str, float] | None = None,
     target_column: str = "is_fraud",
     description: str = "",
 ) -> ModelCard:

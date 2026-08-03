@@ -33,7 +33,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import signal
 import sys
 import time
@@ -41,18 +40,11 @@ from collections import deque
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Callable
+from typing import Any
 from uuid import uuid4
 
 import numpy as np
-
-# ML Pipeline imports
-from sentinelflow.ml.feature_engine import TransactionFeatureEngine
-from sentinelflow.ml.models import IsolationForestModel, XGBoostFraudModel, AutoEncoderModel
-from sentinelflow.ml.ensemble import EnsembleVoter
-from sentinelflow.ml.explainer import FraudExplainer
-
-from confluent_kafka import Consumer, Producer, KafkaError, KafkaException
+from confluent_kafka import Consumer, KafkaError, KafkaException, Producer
 from loguru import logger
 from rich.console import Console
 from rich.live import Live
@@ -60,13 +52,17 @@ from rich.panel import Panel
 from rich.table import Table
 
 from sentinelflow.config import get_settings
+from sentinelflow.ml.ensemble import EnsembleVoter
+from sentinelflow.ml.explainer import FraudExplainer
+
+# ML Pipeline imports
+from sentinelflow.ml.feature_engine import TransactionFeatureEngine
+from sentinelflow.ml.models import AutoEncoderModel, IsolationForestModel, XGBoostFraudModel
 from sentinelflow.processor.graph_engine import GraphEngine
 from sentinelflow.processor.redis_geo import (
     RedisGeoClient,
     get_city_coordinates,
-    CITY_COORDINATES,
 )
-
 
 # =============================================================================
 # Constants & Enums
@@ -704,7 +700,6 @@ class FraudDetectorService:
         if self._alert_writer:
             try:
                 from sentinelflow.processor.alert_writer import create_alert_from_detection
-                from sentinelflow.contracts import FraudType, Severity
 
                 # Convert FraudAlert to AlertCreate
                 alert_create = create_alert_from_detection(

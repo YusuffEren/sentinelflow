@@ -25,9 +25,9 @@ Usage:
     reporter.generate_str(fraud_alert)
 """
 
-from sentinelflow.compliance.masak import MASAKReporter, STRReport
+from sentinelflow.compliance.audit import AuditEvent, AuditLogger
 from sentinelflow.compliance.engine import ComplianceEngine, ComplianceResult
-from sentinelflow.compliance.audit import AuditLogger, AuditEvent
+from sentinelflow.compliance.masak import MASAKReporter, STRReport
 
 __all__ = [
     "MASAKReporter",

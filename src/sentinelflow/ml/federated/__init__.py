@@ -20,8 +20,8 @@ Usage:
     sim.run_simulation(rounds=10)
 """
 
-from sentinelflow.ml.federated.server import FederatedServer
 from sentinelflow.ml.federated.client import FederatedClient
+from sentinelflow.ml.federated.server import FederatedServer
 from sentinelflow.ml.federated.simulator import FederatedSimulator
 
 __all__ = [

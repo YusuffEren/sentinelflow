@@ -10,13 +10,12 @@ from __future__ import annotations
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
 from sentinelflow.api.deps import get_db_session
 from sentinelflow.auth.service import AuthService
 from sentinelflow.contracts import User, UserRole
-
 
 # HTTP Bearer token scheme
 security = HTTPBearer(auto_error=False)

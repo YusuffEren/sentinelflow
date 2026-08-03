@@ -1,10 +1,11 @@
-import time
-import requests
 import random
-import sys
+import time
 from datetime import datetime
+
+import requests
+
+from sentinelflow.generator.models import Transaction
 from sentinelflow.generator.patterns import FraudPatternMixer
-from sentinelflow.generator.models import Transaction, FraudType
 
 API_URL = "http://localhost:8000/api/v1/transactions"
 

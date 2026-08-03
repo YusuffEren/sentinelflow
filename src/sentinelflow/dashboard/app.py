@@ -22,12 +22,10 @@ Usage:
 import json
 import os
 import sys
-import threading
 import time
 from collections import deque
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Any
 
 import matplotlib.pyplot as plt
 import networkx as nx
@@ -38,7 +36,6 @@ from confluent_kafka import Consumer, KafkaError
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))))
 
 from sentinelflow.config import get_settings
-
 
 # =============================================================================
 # Page Configuration - MUST BE FIRST STREAMLIT COMMAND
@@ -66,7 +63,7 @@ def inject_custom_css():
     .stApp {
         background: linear-gradient(180deg, #0a0a0f 0%, #1a1a2e 100%);
     }
-    
+
     /* Main title styling */
     .main-title {
         text-align: center;
@@ -77,14 +74,14 @@ def inject_custom_css():
         margin-bottom: 0.5rem;
         font-family: 'Courier New', monospace;
     }
-    
+
     .subtitle {
         text-align: center;
         color: #888;
         font-size: 1rem;
         margin-bottom: 2rem;
     }
-    
+
     /* Metric cards */
     .metric-card {
         background: linear-gradient(135deg, #1e1e2f 0%, #2a2a4a 100%);
@@ -94,25 +91,25 @@ def inject_custom_css():
         text-align: center;
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
     }
-    
+
     .metric-value {
         font-size: 3rem;
         font-weight: 700;
         font-family: 'Courier New', monospace;
     }
-    
+
     .metric-label {
         color: #888;
         font-size: 0.9rem;
         text-transform: uppercase;
         letter-spacing: 2px;
     }
-    
+
     .metric-green { color: #00ff88; text-shadow: 0 0 10px rgba(0, 255, 136, 0.5); }
     .metric-red { color: #ff4444; text-shadow: 0 0 10px rgba(255, 68, 68, 0.5); }
     .metric-yellow { color: #ffaa00; text-shadow: 0 0 10px rgba(255, 170, 0, 0.5); }
     .metric-blue { color: #00aaff; text-shadow: 0 0 10px rgba(0, 170, 255, 0.5); }
-    
+
     /* Alert feed */
     .alert-feed {
         background: #1a1a2e;
@@ -122,7 +119,7 @@ def inject_custom_css():
         max-height: 400px;
         overflow-y: auto;
     }
-    
+
     .alert-item {
         background: linear-gradient(90deg, #2a1a1a 0%, #1a1a2e 100%);
         border-left: 4px solid #ff4444;
@@ -130,30 +127,30 @@ def inject_custom_css():
         margin-bottom: 0.5rem;
         border-radius: 5px;
     }
-    
+
     .alert-critical { border-left-color: #ff0000; }
     .alert-high { border-left-color: #ff4444; }
     .alert-medium { border-left-color: #ffaa00; }
     .alert-low { border-left-color: #00aaff; }
-    
+
     .alert-time {
         color: #666;
         font-size: 0.75rem;
         font-family: 'Courier New', monospace;
     }
-    
+
     .alert-type {
         color: #ff4444;
         font-weight: 700;
         font-size: 0.9rem;
     }
-    
+
     .alert-desc {
         color: #ccc;
         font-size: 0.85rem;
         margin-top: 0.3rem;
     }
-    
+
     /* Section headers */
     .section-header {
         color: #00ff88;
@@ -162,7 +159,7 @@ def inject_custom_css():
         margin-bottom: 1rem;
         font-family: 'Courier New', monospace;
     }
-    
+
     /* Status indicator */
     .status-online {
         display: inline-block;
@@ -173,18 +170,18 @@ def inject_custom_css():
         margin-right: 8px;
         animation: pulse 2s infinite;
     }
-    
+
     @keyframes pulse {
         0% { box-shadow: 0 0 0 0 rgba(0, 255, 136, 0.7); }
         70% { box-shadow: 0 0 0 10px rgba(0, 255, 136, 0); }
         100% { box-shadow: 0 0 0 0 rgba(0, 255, 136, 0); }
     }
-    
+
     /* Hide Streamlit branding */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
-    
+
     /* Graph container */
     .graph-container {
         background: #1a1a2e;
@@ -275,7 +272,7 @@ def poll_alerts(consumer: Consumer, timeout: float = 0.1) -> list[dict]:
         except json.JSONDecodeError:
             pass
 
-    except Exception as e:
+    except Exception:
         st.session_state.dashboard.is_connected = False
 
     return alerts
@@ -526,7 +523,7 @@ def render_fraud_ring_graph():
     st.markdown(
         f"""
     <div style="text-align: center; color: #888; font-size: 0.9rem;">
-        Ring ID: {alert.get('alert_id', 'N/A')} | 
+        Ring ID: {alert.get('alert_id', 'N/A')} |
         Confidence: {alert.get('confidence', 0) * 100:.0f}% |
         Detected: {alert.get('detected_at', 'N/A')[:19]}
     </div>
@@ -557,7 +554,7 @@ def render_system_status():
 
     with col2:
         st.markdown(
-            f"""
+            """
         <div style="text-align: center; padding: 10px;">
             <span style="color: #00ff88; font-size: 1.2rem;">●</span>
             <span style="color: #888; margin-left: 8px;">Neo4j: ONLINE</span>
@@ -568,7 +565,7 @@ def render_system_status():
 
     with col3:
         st.markdown(
-            f"""
+            """
         <div style="text-align: center; padding: 10px;">
             <span style="color: #00ff88; font-size: 1.2rem;">●</span>
             <span style="color: #888; margin-left: 8px;">Redis: ONLINE</span>
@@ -587,8 +584,6 @@ def add_demo_alert():
     """Add a demo alert for testing."""
     import random
     from uuid import uuid4
-
-    dashboard = st.session_state.dashboard
 
     fraud_types = [
         ("circular_ring", "Circular transaction ring detected: TR001 → TR002 → TR003 → TR001"),
@@ -705,7 +700,7 @@ def main():
 
     # Auto-refresh and Kafka polling
     # Create Kafka consumer placeholder
-    consumer_placeholder = st.empty()
+    st.empty()
 
     try:
         consumer = create_kafka_consumer(kafka_servers, kafka_topic, "sentinelflow-dashboard")
@@ -719,7 +714,7 @@ def main():
                 st.rerun()
 
             consumer.close()
-    except Exception as e:
+    except Exception:
         st.session_state.dashboard.is_connected = False
 
     # Auto-refresh every 2 seconds

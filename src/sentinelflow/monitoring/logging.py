@@ -29,15 +29,14 @@ from __future__ import annotations
 import json
 import os
 import sys
+import uuid
 from contextvars import ContextVar
 from datetime import datetime, timezone
 from functools import wraps
 from pathlib import Path
 from typing import Any, Callable
-import uuid
 
 from loguru import logger
-
 
 # =============================================================================
 # Context Variables
@@ -224,7 +223,7 @@ class StructuredLogger:
 
         self._configured = True
         logger.info(
-            f"Structured logging configured",
+            "Structured logging configured",
             service=self._service_name,
             level=self._log_level,
             json=self._json_output,

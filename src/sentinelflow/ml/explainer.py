@@ -33,7 +33,6 @@ except ImportError:
 # olarak tanımlıdır; burada yeniden tanımlamak yerine import ediyoruz.
 from sentinelflow.ml.feature_engine import FEATURE_DESCRIPTIONS
 
-
 # =============================================================================
 # Data Classes
 # =============================================================================
@@ -153,13 +152,19 @@ class FraudExplainer:
         try:
             # Create SHAP explainer
             if hasattr(model, "predict_proba"):
-                predict_fn = lambda x: (
-                    model.predict_proba(x)
-                    if len(x.shape) == 2
-                    else model.predict_proba(x.reshape(1, -1))
-                )
+
+                def predict_fn(x):
+                    return (
+                        model.predict_proba(x)
+                        if len(x.shape) == 2
+                        else model.predict_proba(x.reshape(1, -1))
+                    )
+
             elif hasattr(model, "predict_single"):
-                predict_fn = lambda x: np.array([model.predict_single(row) for row in x])
+
+                def predict_fn(x):
+                    return np.array([model.predict_single(row) for row in x])
+
             else:
                 return self._explain_with_features(features, None)
 

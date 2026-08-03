@@ -12,7 +12,6 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-
 # Current schema version - increment on breaking changes
 SCHEMA_VERSION = "1.0.0"
 

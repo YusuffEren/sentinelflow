@@ -7,14 +7,10 @@ Tests for security module: rate limiting, input validation, auth.
 Run with: pytest tests/test_security.py -v
 """
 
-import sys
 import os
-import time
+import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
-
-import pytest
-from datetime import datetime, timedelta, timezone
 
 
 # =============================================================================
@@ -111,8 +107,8 @@ class TestRateLimiter:
         limiter.check("old-client", "default")
         assert "old-client" in limiter._state
 
-        # Use max_age=0 to force cleanup
-        removed = limiter.cleanup_old_entries(max_age_seconds=0)
+        # Use max_age=-1 to force cleanup of entries created now
+        removed = limiter.cleanup_old_entries(max_age_seconds=-1)
         assert removed >= 1
 
     def test_rate_limit_headers(self):
@@ -416,7 +412,9 @@ class TestAuthManager:
         from sentinelflow.security import AuthManager
 
         auth = AuthManager(secret_key="test-secret-key-for-testing")
-        token = auth.create_access_token(user_id="admin-1", username="admin", roles=["admin", "analyst"])
+        token = auth.create_access_token(
+            user_id="admin-1", username="admin", roles=["admin", "analyst"]
+        )
 
         user = auth.verify_token(token)
         assert "admin" in user.roles
@@ -442,9 +440,8 @@ class TestAuthManager:
         token = auth.create_access_token(user_id="user-42", username="user42", roles=["analyst"])
 
         from jose import jwt as jose_jwt
-        payload = jose_jwt.decode(
-            token, "test-secret-key-for-testing", algorithms=["HS256"]
-        )
+
+        payload = jose_jwt.decode(token, "test-secret-key-for-testing", algorithms=["HS256"])
         assert payload["sub"] == "user-42"
         assert "roles" in payload
         assert "exp" in payload

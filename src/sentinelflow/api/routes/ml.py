@@ -10,20 +10,18 @@ from __future__ import annotations
 import os
 import time
 from datetime import datetime, timezone
-from typing import Any
 
-from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from loguru import logger
 
-from sentinelflow.api.deps import get_db_session
-from sentinelflow.auth.dependencies import get_current_active_user, require_analyst
-from sentinelflow.contracts import User
 from sentinelflow.api.schemas import (
-    ModelStatusResponse,
     ModelInfo,
+    ModelStatusResponse,
     TrainRequest,
     TrainResponse,
 )
+from sentinelflow.auth.dependencies import require_analyst
+from sentinelflow.contracts import User
 
 router = APIRouter(prefix="/ml", tags=["Machine Learning"])
 
@@ -45,7 +43,6 @@ _training_status = {
 async def get_model_status():
     """Get status of ML models."""
     try:
-        from sentinelflow.ml.models import IsolationForestModel, XGBoostFraudModel, AutoEncoderModel
 
         models_dir = os.path.join(os.getcwd(), "models")
 
@@ -179,7 +176,7 @@ async def _run_training(n_samples: int, fraud_ratio: float):
 
         _training_status["progress"] = 30
         _training_status["message"] = "Training models (IsolationForest + XGBoost + AutoEncoder)..."
-        report = pipeline.run(
+        pipeline.run(
             n_samples=n_samples,
             fraud_ratio=fraud_ratio,
         )
@@ -203,7 +200,7 @@ async def _run_training(n_samples: int, fraud_ratio: float):
 async def get_features():
     """Get ML feature definitions."""
     try:
-        from sentinelflow.ml.feature_engine import FEATURE_NAMES, FEATURE_DESCRIPTIONS
+        from sentinelflow.ml.feature_engine import FEATURE_DESCRIPTIONS, FEATURE_NAMES
 
         features = []
         for name in FEATURE_NAMES:

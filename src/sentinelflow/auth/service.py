@@ -9,25 +9,23 @@ from __future__ import annotations
 
 import hashlib
 import secrets
-from datetime import datetime, timezone, timedelta
-from typing import Any
+from datetime import datetime, timedelta, timezone
 
-from jose import jwt, JWTError
+from jose import JWTError, jwt
+from loguru import logger
 from sqlalchemy import select, update
 from sqlalchemy.orm import Session
-from loguru import logger
 
 from sentinelflow.auth.config import auth_config
 from sentinelflow.auth.password import hash_password, verify_password
-from sentinelflow.database.models import UserModel, RefreshTokenModel
 from sentinelflow.contracts import (
+    TokenPayload,
+    TokenResponse,
     User,
     UserCreate,
     UserRole,
-    UserStatus,
-    TokenResponse,
-    TokenPayload,
 )
+from sentinelflow.database.models import RefreshTokenModel, UserModel
 
 
 class AuthService:
@@ -194,7 +192,7 @@ class AuthService:
         token_hash = self._hash_token(refresh_token)
         stmt = select(RefreshTokenModel).where(
             RefreshTokenModel.token_hash == token_hash,
-            RefreshTokenModel.is_revoked == False,
+            not RefreshTokenModel.is_revoked,
         )
         result = self._session.execute(stmt)
         token_model = result.scalar_one_or_none()

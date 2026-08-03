@@ -17,22 +17,21 @@ Metrics are exposed at /metrics endpoint for Prometheus scraping.
 from __future__ import annotations
 
 import time
-from dataclasses import dataclass, field
 from functools import wraps
-from typing import Any, Callable, Optional
+from typing import Callable
 
 from loguru import logger
 
 try:
     from prometheus_client import (
-        Counter,
-        Histogram,
-        Gauge,
-        Summary,
-        Info,
-        CollectorRegistry,
-        generate_latest,
         CONTENT_TYPE_LATEST,
+        CollectorRegistry,
+        Counter,
+        Gauge,
+        Histogram,
+        Info,
+        Summary,
+        generate_latest,
     )
 
     HAS_PROMETHEUS = True
@@ -513,7 +512,7 @@ def track_api_request(method: str, endpoint: str):
             try:
                 result = await func(*args, **kwargs)
                 return result
-            except Exception as e:
+            except Exception:
                 status_code = 500
                 raise
             finally:

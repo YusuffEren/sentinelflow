@@ -19,6 +19,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Any
+
 import numpy as np
 from loguru import logger
 
@@ -240,7 +241,7 @@ class FederatedServer:
         all_metrics: dict[str, list[float]] = {}
         total_samples = 0
 
-        for client_id, client in self._clients.items():
+        for _client_id, client in self._clients.items():
             # Send global parameters
             client.set_parameters(global_params)
 
@@ -299,7 +300,7 @@ class FederatedServer:
         """
         logger.info(f"Starting federated training for {rounds} rounds...")
 
-        for round_num in range(rounds):
+        for _round_num in range(rounds):
             self.train_round()
 
         logger.info(

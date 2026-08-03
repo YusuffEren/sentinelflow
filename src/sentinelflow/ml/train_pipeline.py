@@ -21,38 +21,33 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
 import time
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 import numpy as np
-import pandas as pd
 from loguru import logger
-
-from sklearn.model_selection import train_test_split, StratifiedKFold
 from sklearn.metrics import (
     accuracy_score,
-    precision_score,
-    recall_score,
-    f1_score,
-    roc_auc_score,
     average_precision_score,
     confusion_matrix,
-    classification_report,
+    f1_score,
+    precision_score,
+    recall_score,
+    roc_auc_score,
 )
+from sklearn.model_selection import train_test_split
 
-from sentinelflow.ml.feature_engine import TransactionFeatureEngine, NUM_FEATURES
+from sentinelflow.ml.dataset_loader import FraudDatasetLoader
+from sentinelflow.ml.ensemble import EnsembleVoter
+from sentinelflow.ml.feature_engine import NUM_FEATURES
 from sentinelflow.ml.models import (
+    AutoEncoderModel,
     IsolationForestModel,
     XGBoostFraudModel,
-    AutoEncoderModel,
 )
-from sentinelflow.ml.ensemble import EnsembleVoter
-from sentinelflow.ml.dataset_loader import FraudDatasetLoader
-
 
 # =============================================================================
 # Metrics Data Classes
@@ -465,7 +460,7 @@ class TrainPipeline:
         print("=" * 70)
 
         # Confusion matrix for ensemble
-        print(f"\n  Ensemble Confusion Matrix:")
+        print("\n  Ensemble Confusion Matrix:")
         print(f"  {'':15} Predicted Normal  Predicted Fraud")
         print(f"  {'Actual Normal':15} {em.true_negatives:>16,}  {em.false_positives:>15,}")
         print(f"  {'Actual Fraud':15} {em.false_negatives:>16,}  {em.true_positives:>15,}")

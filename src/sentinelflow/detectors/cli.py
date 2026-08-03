@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+
 from loguru import logger
 
 
@@ -60,7 +61,9 @@ Examples:
 
     # Run detector
     run_parser = subparsers.add_parser("run", help="Run the main fraud detector")
-    run_parser.add_argument("--kafka-servers", default="localhost:9092", help="Kafka bootstrap servers")
+    run_parser.add_argument(
+        "--kafka-servers", default="localhost:9092", help="Kafka bootstrap servers"
+    )
     run_parser.add_argument("--topic", default="transactions", help="Kafka topic")
     run_parser.add_argument("--group", default="sentinelflow-consumers", help="Consumer group")
     run_parser.set_defaults(func=run_detector)

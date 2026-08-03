@@ -6,17 +6,15 @@
 from datetime import timedelta
 from functools import lru_cache
 
+from loguru import logger
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from loguru import logger
 
 
 class AuthSettings(BaseSettings):
     """Authentication configuration loaded from environment / .env."""
 
-    model_config = SettingsConfigDict(
-        env_file=".env", env_file_encoding="utf-8", extra="ignore"
-    )
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     # JWT Settings
     JWT_SECRET_KEY: str = Field(

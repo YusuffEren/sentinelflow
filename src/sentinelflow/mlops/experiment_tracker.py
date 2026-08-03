@@ -35,22 +35,21 @@ Usage:
 from __future__ import annotations
 
 import json
-import os
 import pickle
+import threading
 import time
+import uuid
+from collections.abc import Generator
 from contextlib import contextmanager
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any, Callable, Dict, Generator, List, Optional, Union
-import threading
-import hashlib
-import uuid
+from typing import Any
 
 import numpy as np
-from sklearn.model_selection import cross_val_score
 from loguru import logger
+from sklearn.model_selection import cross_val_score
 
 try:
     import optuna
@@ -93,25 +92,25 @@ class Run:
     duration_seconds: float = 0.0
 
     # Logged data
-    params: Dict[str, Any] = field(default_factory=dict)
-    metrics: Dict[str, float] = field(default_factory=dict)
-    metric_history: Dict[str, List[tuple]] = field(default_factory=dict)
-    tags: Dict[str, str] = field(default_factory=dict)
-    artifacts: Dict[str, str] = field(default_factory=dict)
+    params: dict[str, Any] = field(default_factory=dict)
+    metrics: dict[str, float] = field(default_factory=dict)
+    metric_history: dict[str, list[tuple]] = field(default_factory=dict)
+    tags: dict[str, str] = field(default_factory=dict)
+    artifacts: dict[str, str] = field(default_factory=dict)
 
     # Metadata
     notes: str = ""
 
     # Internal
-    _tracker: Optional["ExperimentTracker"] = field(default=None, repr=False)
-    _run_dir: Optional[Path] = field(default=None, repr=False)
+    _tracker: ExperimentTracker | None = field(default=None, repr=False)
+    _run_dir: Path | None = field(default=None, repr=False)
 
     def log_param(self, key: str, value: Any) -> None:
         """Log a single parameter."""
         self.params[key] = value
         logger.debug(f"Logged param: {key}={value}")
 
-    def log_params(self, params: Dict[str, Any]) -> None:
+    def log_params(self, params: dict[str, Any]) -> None:
         """Log multiple parameters."""
         self.params.update(params)
         logger.debug(f"Logged {len(params)} params")
@@ -120,7 +119,7 @@ class Run:
         self,
         key: str,
         value: float,
-        step: Optional[int] = None,
+        step: int | None = None,
     ) -> None:
         """Log a single metric."""
         self.metrics[key] = value
@@ -136,8 +135,8 @@ class Run:
 
     def log_metrics(
         self,
-        metrics: Dict[str, float],
-        step: Optional[int] = None,
+        metrics: dict[str, float],
+        step: int | None = None,
     ) -> None:
         """Log multiple metrics."""
         for key, value in metrics.items():
@@ -185,7 +184,7 @@ class Run:
         """Set a tag."""
         self.tags[key] = value
 
-    def set_tags(self, tags: Dict[str, str]) -> None:
+    def set_tags(self, tags: dict[str, str]) -> None:
         """Set multiple tags."""
         self.tags.update(tags)
 
@@ -196,7 +195,7 @@ class Run:
         else:
             self.notes = note
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         return {
             "run_id": self.run_id,
@@ -223,12 +222,12 @@ class Experiment:
     created_at: str = ""
 
     # Runs
-    run_ids: List[str] = field(default_factory=list)
+    run_ids: list[str] = field(default_factory=list)
 
     # Tags
-    tags: Dict[str, str] = field(default_factory=dict)
+    tags: dict[str, str] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
 
@@ -276,9 +275,9 @@ class ExperimentTracker:
         self._tracker_file = self._tracking_path / "tracker.json"
 
         # In-memory state
-        self._experiments: Dict[str, Experiment] = {}
-        self._runs: Dict[str, Run] = {}
-        self._active_run: Optional[Run] = None
+        self._experiments: dict[str, Experiment] = {}
+        self._runs: dict[str, Run] = {}
+        self._active_run: Run | None = None
 
         # Thread safety
         self._lock = threading.RLock()
@@ -298,7 +297,7 @@ class ExperimentTracker:
         """Load tracker state from disk."""
         if self._tracker_file.exists():
             try:
-                with open(self._tracker_file, "r", encoding="utf-8") as f:
+                with open(self._tracker_file, encoding="utf-8") as f:
                     data = json.load(f)
 
                 for exp_data in data.get("experiments", []):
@@ -330,7 +329,7 @@ class ExperimentTracker:
         self,
         name: str,
         description: str = "",
-        tags: Optional[Dict[str, str]] = None,
+        tags: dict[str, str] | None = None,
     ) -> Experiment:
         """Create a new experiment."""
         with self._lock:
@@ -365,7 +364,7 @@ class ExperimentTracker:
 
             return experiment
 
-    def get_experiment(self, name: str) -> Optional[Experiment]:
+    def get_experiment(self, name: str) -> Experiment | None:
         """Get experiment by name."""
         for exp in self._experiments.values():
             if exp.name == name:
@@ -376,8 +375,8 @@ class ExperimentTracker:
     def start_run(
         self,
         experiment_name: str = "default",
-        run_name: Optional[str] = None,
-        tags: Optional[Dict[str, str]] = None,
+        run_name: str | None = None,
+        tags: dict[str, str] | None = None,
     ) -> Generator[Run, None, None]:
         """
         Start a new experiment run.
@@ -440,15 +439,15 @@ class ExperimentTracker:
                 f"Run {run_id} {run.status.value} " f"(duration: {run.duration_seconds:.2f}s)"
             )
 
-    def get_run(self, run_id: str) -> Optional[Run]:
+    def get_run(self, run_id: str) -> Run | None:
         """Get a run by ID."""
         return self._runs.get(run_id)
 
     def list_runs(
         self,
         experiment_name: str,
-        status: Optional[RunStatus] = None,
-    ) -> List[Run]:
+        status: RunStatus | None = None,
+    ) -> list[Run]:
         """List runs for an experiment."""
         experiment = self.get_experiment(experiment_name)
         if not experiment:
@@ -466,7 +465,7 @@ class ExperimentTracker:
         experiment_name: str,
         metric: str,
         mode: str = "max",
-    ) -> Optional[Run]:
+    ) -> Run | None:
         """
         Get the best run for an experiment based on a metric.
 
@@ -493,9 +492,9 @@ class ExperimentTracker:
 
     def compare_runs(
         self,
-        run_ids: List[str],
-        metrics: Optional[List[str]] = None,
-    ) -> Dict[str, Any]:
+        run_ids: list[str],
+        metrics: list[str] | None = None,
+    ) -> dict[str, Any]:
         """Compare multiple runs."""
         comparison = {
             "runs": [],
@@ -541,15 +540,15 @@ class ExperimentTracker:
     def tune_hyperparameters(
         self,
         model_class: type,
-        param_space: Dict[str, Any],
+        param_space: dict[str, Any],
         X_train: np.ndarray,
         y_train: np.ndarray,
         scoring: str = "f1",
         cv: int = 5,
         n_trials: int = 50,
         experiment_name: str = "hyperparameter_tuning",
-        timeout: Optional[int] = None,
-    ) -> Dict[str, Any]:
+        timeout: int | None = None,
+    ) -> dict[str, Any]:
         """
         Hyperparameter tuning with Optuna.
 
@@ -621,12 +620,12 @@ class ExperimentTracker:
         }
 
     @property
-    def active_run(self) -> Optional[Run]:
+    def active_run(self) -> Run | None:
         """Get the currently active run."""
         return self._active_run
 
     @property
-    def stats(self) -> Dict[str, Any]:
+    def stats(self) -> dict[str, Any]:
         """Tracker statistics."""
         return {
             "total_experiments": len(self._experiments),

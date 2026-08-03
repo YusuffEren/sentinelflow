@@ -11,9 +11,9 @@ This module creates realistic fraud scenarios including:
 """
 
 import random
+from collections.abc import Generator
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
-from typing import Generator
 from uuid import uuid4
 
 from sentinelflow.generator.models import (
@@ -22,7 +22,6 @@ from sentinelflow.generator.models import (
     FraudType,
     Transaction,
 )
-
 
 # =============================================================================
 # Turkish Geographic Data

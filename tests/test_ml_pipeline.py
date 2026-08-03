@@ -5,23 +5,23 @@
 Tests for the ML feature engineering, models, and ensemble components.
 """
 
-import numpy as np
-import pytest
 from datetime import datetime, timezone
 
+import numpy as np
+import pytest
+
+from sentinelflow.ml.ensemble import EnsemblePrediction, EnsembleVoter
+from sentinelflow.ml.explainer import FraudExplainer, FraudExplanation
 from sentinelflow.ml.feature_engine import (
-    TransactionFeatureEngine,
     FEATURE_NAMES,
     NUM_FEATURES,
+    TransactionFeatureEngine,
 )
 from sentinelflow.ml.models import (
+    AutoEncoderModel,
     IsolationForestModel,
     XGBoostFraudModel,
-    AutoEncoderModel,
 )
-from sentinelflow.ml.ensemble import EnsembleVoter, EnsemblePrediction
-from sentinelflow.ml.explainer import FraudExplainer, FraudExplanation
-
 
 # =============================================================================
 # Fixtures
@@ -401,7 +401,7 @@ class TestFraudExplainer:
 
         # Create feature values with suspicious patterns
         features = np.zeros(NUM_FEATURES)
-        feature_values = {name: 0.0 for name in FEATURE_NAMES}
+        feature_values = dict.fromkeys(FEATURE_NAMES, 0.0)
         feature_values["amount_zscore"] = 5.0  # High z-score
         feature_values["is_night"] = 1.0  # Night transaction
         feature_values["keyword_score"] = 3.0  # Suspicious keywords

@@ -11,9 +11,9 @@ from datetime import datetime
 from enum import Enum
 from typing import Any
 
-from pydantic import Field, EmailStr, field_validator
+from pydantic import EmailStr, Field, field_validator
 
-from sentinelflow.contracts.base import ContractBase, utc_now, generate_id
+from sentinelflow.contracts.base import ContractBase, generate_id, utc_now
 
 
 class UserRole(str, Enum):

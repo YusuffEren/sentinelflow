@@ -1,12 +1,12 @@
 # SentinelFlow - Test Configuration and Fixtures
 
-import pytest
-import numpy as np
-from datetime import datetime, timedelta
-from typing import Any, Generator
-import sys
 import os
+import sys
+from datetime import datetime
 from unittest.mock import MagicMock
+
+import numpy as np
+import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
@@ -15,6 +15,7 @@ def _is_db_available():
     """Check if database dependencies are available."""
     try:
         import sqlalchemy
+
         return True
     except ImportError:
         return False

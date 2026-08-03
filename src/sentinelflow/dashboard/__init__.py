@@ -10,20 +10,20 @@ Components:
 - i18n.py: Internationalization support
 """
 
-from sentinelflow.dashboard.i18n import get_translations, t, I18n
 from sentinelflow.dashboard.components import (
-    metric_card,
-    metric_row,
     alert_card,
     alert_list,
+    compliance_summary,
+    metric_card,
+    metric_row,
+    ml_dashboard_panel,
+    model_performance_card,
+    ring_stats_panel,
     status_indicator,
     system_status_panel,
-    ring_stats_panel,
-    compliance_summary,
-    model_performance_card,
-    ml_dashboard_panel,
     timeline_item,
 )
+from sentinelflow.dashboard.i18n import I18n, get_translations, t
 
 __all__ = [
     # i18n

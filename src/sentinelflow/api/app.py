@@ -13,42 +13,34 @@ Or:
 
 from __future__ import annotations
 
-import asyncio
 import json
 import os
 import time
-from collections import deque
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
-from typing import Any
-from uuid import uuid4
 
-from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
 from loguru import logger
 
-from sentinelflow.api.schemas import (
-    Alert,
-    AlertListResponse,
-    FraudType,
-    Severity,
-    HealthResponse,
-    StatsResponse,
-    TransactionResponse,
-    TransactionCreate,
-    SCHEMA_VERSION,
-)
+from sentinelflow.api.risk_scoring import router as risk_router
 
 # Import routes
 from sentinelflow.api.routes.alerts import router as alerts_router
-from sentinelflow.api.routes.cases import router as cases_router
 from sentinelflow.api.routes.auth import router as auth_router
-from sentinelflow.api.routes.ml import router as ml_router
-from sentinelflow.api.routes.graph import router as graph_router
+from sentinelflow.api.routes.cases import router as cases_router
 from sentinelflow.api.routes.chat import router as chat_router
-from sentinelflow.api.risk_scoring import router as risk_router
-
+from sentinelflow.api.routes.graph import router as graph_router
+from sentinelflow.api.routes.ml import router as ml_router
+from sentinelflow.api.schemas import (
+    SCHEMA_VERSION,
+    FraudType,
+    HealthResponse,
+    Severity,
+    StatsResponse,
+    TransactionCreate,
+    TransactionResponse,
+)
 
 # =============================================================================
 # Application State
@@ -95,14 +87,14 @@ class AppState:
             return True
 
         try:
-            from sentinelflow.ml.feature_engine import TransactionFeatureEngine, NUM_FEATURES
-            from sentinelflow.ml.models import (
-                IsolationForestModel,
-                XGBoostFraudModel,
-                AutoEncoderModel,
-            )
             from sentinelflow.ml.ensemble import EnsembleVoter
             from sentinelflow.ml.explainer import FraudExplainer
+            from sentinelflow.ml.feature_engine import NUM_FEATURES, TransactionFeatureEngine
+            from sentinelflow.ml.models import (
+                AutoEncoderModel,
+                IsolationForestModel,
+                XGBoostFraudModel,
+            )
 
             self._feature_engine = TransactionFeatureEngine(history_window_size=1000)
 
@@ -177,7 +169,7 @@ app = FastAPI(
     description="""
 ## SentinelFlow Real-Time Fraud Detection Platform
 
-**TEKNOFEST 2026 Finans Teknolojileri** yarışması için geliştirilmiş, 
+**TEKNOFEST 2026 Finans Teknolojileri** yarışması için geliştirilmiş,
 yapay zeka destekli dolandırıcılık tespit platformu.
 
 ### Özellikler
@@ -234,8 +226,8 @@ app.include_router(risk_router)
 async def submit_transaction(tx: TransactionCreate) -> TransactionResponse:
     """Analyze a transaction for fraud."""
     from sentinelflow.api.deps import get_db_session
+    from sentinelflow.processor.alert_writer import create_alert_from_detection
     from sentinelflow.repository import AlertRepository
-    from sentinelflow.processor.alert_writer import AlertWriter, create_alert_from_detection
 
     start_time = time.perf_counter()
 
@@ -251,6 +243,7 @@ async def submit_transaction(tx: TransactionCreate) -> TransactionResponse:
         # Run ML detection if available
         if state._ml_loaded and state._ensemble:
             import numpy as np
+
             from sentinelflow.ml.feature_engine import FEATURE_NAMES
 
             tx_data = tx_with_defaults.model_dump()
@@ -498,6 +491,7 @@ def main():
     """Run the API server."""
     try:
         from dotenv import load_dotenv
+
         load_dotenv()
     except ImportError:
         pass

@@ -30,13 +30,12 @@ import hashlib
 import json
 import os
 import random
-import string
 from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Generator
 from enum import Enum
+from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -204,9 +203,9 @@ class SyntheticUser:
     # Behavioral profile
     typical_amount_mean: float = 2000.0
     typical_amount_std: float = 1500.0
-    typical_hours: List[int] = field(default_factory=lambda: list(range(9, 18)))
-    typical_days: List[int] = field(default_factory=lambda: list(range(5)))
-    typical_receivers: List[str] = field(default_factory=list)
+    typical_hours: list[int] = field(default_factory=lambda: list(range(9, 18)))
+    typical_days: list[int] = field(default_factory=lambda: list(range(5)))
+    typical_receivers: list[str] = field(default_factory=list)
     tx_frequency_per_day: float = 1.5
 
     # Risk profile
@@ -237,7 +236,7 @@ class SyntheticTransaction:
     fraud_type: FraudPattern = FraudPattern.NONE
     fraud_confidence: float = 0.0
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "transaction_id": self.transaction_id,
             "timestamp": self.timestamp.isoformat(),
@@ -303,12 +302,12 @@ class CompetitionDatasetGenerator:
             self._faker = None
 
         # User pool
-        self._users: Dict[str, SyntheticUser] = {}
-        self._fraud_users: List[str] = []
-        self._normal_users: List[str] = []
+        self._users: dict[str, SyntheticUser] = {}
+        self._fraud_users: list[str] = []
+        self._normal_users: list[str] = []
 
         # Transaction history for behavioral consistency
-        self._user_tx_history: Dict[str, List[SyntheticTransaction]] = defaultdict(list)
+        self._user_tx_history: dict[str, list[SyntheticTransaction]] = defaultdict(list)
 
         # City weights for realistic distribution
         total_pop = sum(c["pop"] for c in TURKISH_CITIES.values())
@@ -367,9 +366,9 @@ class CompetitionDatasetGenerator:
         self,
         n_transactions: int = 500000,
         fraud_ratio: float = 0.03,
-        start_date: Optional[datetime] = None,
-        end_date: Optional[datetime] = None,
-        progress_callback: Optional[callable] = None,
+        start_date: datetime | None = None,
+        end_date: datetime | None = None,
+        progress_callback: callable | None = None,
     ) -> pd.DataFrame:
         """
         Generate competition dataset.
@@ -394,7 +393,7 @@ class CompetitionDatasetGenerator:
         n_fraud = int(n_transactions * fraud_ratio)
         n_normal = n_transactions - n_fraud
 
-        transactions: List[Dict] = []
+        transactions: list[dict] = []
 
         # Generate normal transactions
         logger.info(f"Generating {n_normal} normal transactions...")
@@ -934,8 +933,8 @@ class CompetitionDatasetGenerator:
         self,
         start_date: datetime,
         end_date: datetime,
-        typical_hours: Optional[List[int]] = None,
-        typical_days: Optional[List[int]] = None,
+        typical_hours: list[int] | None = None,
+        typical_days: list[int] | None = None,
     ) -> datetime:
         """Generate a timestamp with optional hour/day preferences."""
 
@@ -943,10 +942,7 @@ class CompetitionDatasetGenerator:
         random_days = random.randint(0, delta.days)
         base_date = start_date + timedelta(days=random_days)
 
-        if typical_hours:
-            hour = random.choice(typical_hours)
-        else:
-            hour = random.randint(0, 23)
+        hour = random.choice(typical_hours) if typical_hours else random.randint(0, 23)
 
         minute = random.randint(0, 59)
         second = random.randint(0, 59)
@@ -988,7 +984,7 @@ class CompetitionDatasetGenerator:
         logger.info(f"Dataset saved to {path}")
         return path
 
-    def get_statistics(self, df: pd.DataFrame) -> Dict[str, Any]:
+    def get_statistics(self, df: pd.DataFrame) -> dict[str, Any]:
         """Get dataset statistics."""
         return {
             "total_transactions": len(df),

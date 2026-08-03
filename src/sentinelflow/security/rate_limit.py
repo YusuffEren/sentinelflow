@@ -22,11 +22,10 @@ from __future__ import annotations
 
 import time
 from collections import defaultdict
-from dataclasses import dataclass, field
-from typing import Any, Callable
+from dataclasses import dataclass
+from typing import Callable
 
 from loguru import logger
-
 
 # =============================================================================
 # Rate Limit Configuration
@@ -252,7 +251,7 @@ def create_fastapi_rate_limiter(
         limiter: RateLimiter instance
         key_func: Function to extract client key from request
     """
-    from fastapi import Request, Response, HTTPException
+    from fastapi import HTTPException, Request, Response
     from starlette.middleware.base import BaseHTTPMiddleware
 
     class RateLimitMiddleware(BaseHTTPMiddleware):
@@ -294,7 +293,7 @@ def create_rate_limit_dependency(
     endpoint: str = "default",
 ):
     """Create a FastAPI dependency for rate limiting specific endpoints."""
-    from fastapi import Request, HTTPException, Depends
+    from fastapi import HTTPException, Request
 
     async def rate_limit_check(request: Request):
         client_key = request.client.host if request.client else "unknown"

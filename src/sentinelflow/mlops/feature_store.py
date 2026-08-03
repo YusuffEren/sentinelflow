@@ -35,20 +35,16 @@ Usage:
 
 from __future__ import annotations
 
-import hashlib
 import json
-import pickle
 import threading
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 
-import numpy as np
 import pandas as pd
 from loguru import logger
-
 
 # =============================================================================
 # Enums
@@ -88,18 +84,18 @@ class Feature:
     description: str = ""
 
     # Metadata
-    tags: Dict[str, str] = field(default_factory=dict)
+    tags: dict[str, str] = field(default_factory=dict)
     status: FeatureStatus = FeatureStatus.ACTIVE
 
     # Transformation
-    transformation: Optional[str] = None
+    transformation: str | None = None
 
     # Statistics
-    mean: Optional[float] = None
-    std: Optional[float] = None
-    min_value: Optional[float] = None
-    max_value: Optional[float] = None
-    null_percentage: Optional[float] = None
+    mean: float | None = None
+    std: float | None = None
+    min_value: float | None = None
+    max_value: float | None = None
+    null_percentage: float | None = None
 
     # Versioning
     version: int = 1
@@ -116,7 +112,7 @@ class Feature:
         if not self.updated_at:
             self.updated_at = self.created_at
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "name": self.name,
             "dtype": self.dtype.value,
@@ -143,15 +139,15 @@ class FeatureGroup:
     description: str = ""
 
     # Features
-    features: List[Feature] = field(default_factory=list)
-    feature_names: List[str] = field(default_factory=list)
+    features: list[Feature] = field(default_factory=list)
+    feature_names: list[str] = field(default_factory=list)
 
     # Entity (key column)
     entity_column: str = "entity_id"
     timestamp_column: str = "event_timestamp"
 
     # Metadata
-    tags: Dict[str, str] = field(default_factory=dict)
+    tags: dict[str, str] = field(default_factory=dict)
 
     # Versioning
     version: int = 1
@@ -177,14 +173,14 @@ class FeatureGroup:
         self.feature_names.append(feature.name)
         self.updated_at = datetime.now().isoformat()
 
-    def get_feature(self, name: str) -> Optional[Feature]:
+    def get_feature(self, name: str) -> Feature | None:
         """Get a feature by name."""
         for f in self.features:
             if f.name == name:
                 return f
         return None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "name": self.name,
             "description": self.description,
@@ -249,8 +245,8 @@ class FeatureStore:
         self._online_cache_size = online_cache_size
 
         # In-memory state
-        self._feature_groups: Dict[str, FeatureGroup] = {}
-        self._online_cache: Dict[str, Dict[str, Dict[str, Any]]] = (
+        self._feature_groups: dict[str, FeatureGroup] = {}
+        self._online_cache: dict[str, dict[str, dict[str, Any]]] = (
             {}
         )  # fg_name -> entity_id -> features
 
@@ -272,7 +268,7 @@ class FeatureStore:
         """Load store state from disk."""
         if self._store_file.exists():
             try:
-                with open(self._store_file, "r", encoding="utf-8") as f:
+                with open(self._store_file, encoding="utf-8") as f:
                     data = json.load(f)
 
                 for fg_data in data.get("feature_groups", []):
@@ -297,11 +293,11 @@ class FeatureStore:
     def create_feature_group(
         self,
         name: str,
-        features: List[Feature],
+        features: list[Feature],
         description: str = "",
         entity_column: str = "entity_id",
         timestamp_column: str = "event_timestamp",
-        tags: Optional[Dict[str, str]] = None,
+        tags: dict[str, str] | None = None,
         online_enabled: bool = True,
         offline_enabled: bool = True,
         ttl_seconds: int = 86400 * 30,
@@ -358,17 +354,17 @@ class FeatureStore:
 
             return fg
 
-    def get_feature_group(self, name: str) -> Optional[FeatureGroup]:
+    def get_feature_group(self, name: str) -> FeatureGroup | None:
         """Get a feature group by name."""
         return self._feature_groups.get(name)
 
-    def list_feature_groups(self) -> List[str]:
+    def list_feature_groups(self) -> list[str]:
         """List all feature group names."""
         return list(self._feature_groups.keys())
 
     def ingest(
         self,
-        feature_group: Union[str, FeatureGroup],
+        feature_group: str | FeatureGroup,
         data: pd.DataFrame,
         update_statistics: bool = True,
     ) -> int:
@@ -458,8 +454,8 @@ class FeatureStore:
         self,
         feature_group: str,
         entity_id: str,
-        feature_names: Optional[List[str]] = None,
-    ) -> Dict[str, Any]:
+        feature_names: list[str] | None = None,
+    ) -> dict[str, Any]:
         """
         Get features for online serving (real-time).
 
@@ -485,9 +481,9 @@ class FeatureStore:
     def get_online_features_batch(
         self,
         feature_group: str,
-        entity_ids: List[str],
-        feature_names: Optional[List[str]] = None,
-    ) -> Dict[str, Dict[str, Any]]:
+        entity_ids: list[str],
+        feature_names: list[str] | None = None,
+    ) -> dict[str, dict[str, Any]]:
         """
         Get features for multiple entities (batch online serving).
 
@@ -507,10 +503,10 @@ class FeatureStore:
     def get_offline_features(
         self,
         feature_group: str,
-        entity_ids: Optional[List[str]] = None,
-        start_time: Optional[datetime] = None,
-        end_time: Optional[datetime] = None,
-        feature_names: Optional[List[str]] = None,
+        entity_ids: list[str] | None = None,
+        start_time: datetime | None = None,
+        end_time: datetime | None = None,
+        feature_names: list[str] | None = None,
     ) -> pd.DataFrame:
         """
         Get features for offline serving (batch).
@@ -559,8 +555,8 @@ class FeatureStore:
         self,
         feature_group: str,
         entity_df: pd.DataFrame,
-        feature_names: Optional[List[str]] = None,
-        ttl: Optional[timedelta] = None,
+        feature_names: list[str] | None = None,
+        ttl: timedelta | None = None,
     ) -> pd.DataFrame:
         """
         Point-in-time correct feature retrieval.
@@ -627,7 +623,7 @@ class FeatureStore:
             return True
 
     @property
-    def stats(self) -> Dict[str, Any]:
+    def stats(self) -> dict[str, Any]:
         """Feature store statistics."""
         return {
             "total_feature_groups": len(self._feature_groups),

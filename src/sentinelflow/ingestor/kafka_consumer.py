@@ -1,10 +1,10 @@
 import json
-import requests
-from confluent_kafka import Consumer, KafkaException, KafkaError
-from loguru import logger
-import sys
 import os
 import time
+
+import requests
+from confluent_kafka import Consumer, KafkaError
+from loguru import logger
 
 # Configuration
 KAFKA_BROKER = os.getenv("KAFKA_BROKER", "localhost:9092")

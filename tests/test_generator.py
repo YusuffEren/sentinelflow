@@ -7,18 +7,20 @@ Tests for the synthetic transaction generator.
 Run with: pytest tests/test_generator.py -v
 """
 
-import sys
 import os
+import sys
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-import pytest
 from uuid import uuid4
-from datetime import datetime
+
+import pytest
 
 
 @pytest.fixture
 def sample_account():
     from sentinelflow.generator.models import Account
+
     return Account(
         iban="TR330006100519786457841326",
         holder_name="Ahmet Yilmaz",
@@ -33,7 +35,9 @@ class TestGeneratorModels:
         """Valid account should pass validation."""
         from sentinelflow.generator.models import Account
 
-        account = Account(iban="TR330006100519786457841326", holder_name="Ahmet Yilmaz", city="Istanbul")
+        account = Account(
+            iban="TR330006100519786457841326", holder_name="Ahmet Yilmaz", city="Istanbul"
+        )
         assert account.iban == "TR330006100519786457841326"
         assert account.holder_name == "Ahmet Yilmaz"
 
@@ -66,7 +70,7 @@ class TestGeneratorModels:
 
     def test_transaction_with_fraud(self, sample_account):
         """Transaction should accept fraud type."""
-        from sentinelflow.generator.models import Transaction, FraudType
+        from sentinelflow.generator.models import FraudType, Transaction
 
         tx = Transaction(
             sender_account_id=uuid4(),
@@ -194,10 +198,10 @@ class TestGeneratorMain:
 
     def test_parse_args_defaults(self):
         """Argument parser should have sensible defaults."""
-        from sentinelflow.generator.main import parse_args
 
         # parse_args reads sys.argv; simulate by patching
         import argparse
+
         parser = argparse.ArgumentParser()
         parser.add_argument("--batch-size", type=int, default=100)
         parser.add_argument("--fraud-ratio", type=float, default=0.05)

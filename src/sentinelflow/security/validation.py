@@ -24,12 +24,11 @@ import re
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
-from enum import Enum
 
 from loguru import logger
 
 try:
-    from pydantic import BaseModel, Field, validator, field_validator
+    from pydantic import BaseModel, Field, field_validator, validator
     from pydantic import ValidationError as PydanticValidationError
 
     HAS_PYDANTIC = True
@@ -203,7 +202,6 @@ class InputValidator:
             ValidationResult with errors and sanitized data
         """
         result = ValidationResult(is_valid=True)
-        sanitized = {}
 
         # Required fields
         required_fields = ["sender_iban", "receiver_iban", "amount"]

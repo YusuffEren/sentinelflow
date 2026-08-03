@@ -5,15 +5,15 @@
 JWT-based authentication and authorization.
 """
 
-from sentinelflow.auth.service import AuthService
 from sentinelflow.auth.dependencies import (
-    get_current_user,
     get_current_active_user,
-    require_role,
+    get_current_user,
     require_admin,
     require_analyst,
+    require_role,
 )
 from sentinelflow.auth.password import hash_password, verify_password
+from sentinelflow.auth.service import AuthService
 
 __all__ = [
     "AuthService",

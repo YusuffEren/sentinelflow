@@ -35,12 +35,17 @@ Utilities:
 - TrainPipeline: End-to-end model training
 """
 
-from loguru import logger
+try:
+    from loguru import logger
+except ImportError:
+    import logging
+    logger = logging.getLogger("sentinelflow.ml")
+
+from sentinelflow.ml.dataset_loader import FraudDatasetLoader
+from sentinelflow.ml.ensemble import EnsembleVoter
 
 # Base components - always available
-from sentinelflow.ml.feature_engine import TransactionFeatureEngine, FEATURE_NAMES, NUM_FEATURES
-from sentinelflow.ml.ensemble import EnsembleVoter
-from sentinelflow.ml.dataset_loader import FraudDatasetLoader
+from sentinelflow.ml.feature_engine import FEATURE_NAMES, NUM_FEATURES, TransactionFeatureEngine
 
 # Models that don't require torch
 from sentinelflow.ml.models import IsolationForestModel, XGBoostFraudModel
@@ -83,11 +88,11 @@ except ImportError:
 # Advanced components for TEKNOFEST
 try:
     from sentinelflow.ml.advanced_models import (
-        LightGBMFraudModel,
         CatBoostFraudModel,
-        StackingEnsemble,
         DataBalancer,
         FocalLoss,
+        LightGBMFraudModel,
+        StackingEnsemble,
         create_competition_ensemble,
     )
 except ImportError:
@@ -100,9 +105,9 @@ except ImportError:
 
 try:
     from sentinelflow.ml.advanced_features import (
+        ADVANCED_FEATURE_NAMES,
         AdvancedFeatureEngine,
         CombinedFeatureEngine,
-        ADVANCED_FEATURE_NAMES,
     )
 except ImportError:
     AdvancedFeatureEngine = None
@@ -111,9 +116,9 @@ except ImportError:
 
 try:
     from sentinelflow.ml.graph_features import (
+        GRAPH_FEATURE_NAMES,
         GraphFeatureEngine,
         InMemoryGraphFeatureEngine,
-        GRAPH_FEATURE_NAMES,
     )
 except ImportError:
     GraphFeatureEngine = None
