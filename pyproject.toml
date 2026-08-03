@@ -236,7 +236,7 @@ select = [
 ignore = ["E501", "B008", "C901", "E722", "F401", "B018", "B027", "F402", "B904", "C401", "B007", "SIM102", "E402", "B017"]
 
 [tool.mypy]
-python_version = "3.9"
+python_version = "3.11"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true

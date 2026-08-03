@@ -2,7 +2,7 @@ import json
 import os
 import time
 
-import requests
+import requests  # type: ignore[import-untyped]
 from confluent_kafka import Consumer, KafkaError
 from loguru import logger
 

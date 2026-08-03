@@ -37,8 +37,16 @@ from datetime import datetime, timezone
 from typing import Any, TypedDict
 
 try:
+    from loguru import logger
+except ImportError:
+    import logging
+
+    logger = logging.getLogger("sentinelflow.graph_engine")
+
+try:
     from neo4j import Driver, GraphDatabase, Session
     from neo4j.exceptions import Neo4jError, ServiceUnavailable
+
     HAS_NEO4J = True
 except ImportError:
     Driver = GraphDatabase = Session = None

@@ -39,6 +39,7 @@ try:
     from loguru import logger
 except ImportError:
     import logging
+
     logger = logging.getLogger("sentinelflow.ml")
 
 from sentinelflow.ml.dataset_loader import FraudDatasetLoader

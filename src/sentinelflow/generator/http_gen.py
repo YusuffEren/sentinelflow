@@ -2,7 +2,7 @@ import random
 import time
 from datetime import datetime
 
-import requests
+import requests  # type: ignore[import-untyped]
 
 from sentinelflow.generator.models import Transaction
 from sentinelflow.generator.patterns import FraudPatternMixer

@@ -34,6 +34,7 @@ from datetime import datetime, timezone
 
 try:
     import redis
+
     HAS_REDIS = True
 except ImportError:
     redis = None
