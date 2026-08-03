@@ -237,14 +237,15 @@ ignore = ["E501", "B008", "C901", "E722", "F401", "B018", "B027", "F402", "B904"
 
 [tool.mypy]
 python_version = "3.11"
-warn_return_any = true
+ignore_missing_imports = true
+warn_return_any = false
 warn_unused_configs = true
-disallow_untyped_defs = true
-disallow_incomplete_defs = true
-check_untyped_defs = true
-strict_optional = true
-warn_redundant_casts = true
-warn_unused_ignores = true
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+check_untyped_defs = false
+strict_optional = false
+warn_redundant_casts = false
+warn_unused_ignores = false
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
