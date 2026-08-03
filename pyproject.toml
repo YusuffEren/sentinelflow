@@ -202,7 +202,7 @@ packages = ["src/sentinelflow"]
 
 [tool.black]
 line-length = 100
-target-version = ['py39', 'py310', 'py311', 'py312']
+target-version = ['py310', 'py311', 'py312']
 include = '\.pyi?$'
 extend-exclude = '''
 /(
@@ -220,7 +220,7 @@ extend-exclude = '''
 
 [tool.ruff]
 line-length = 100
-target-version = "py39"
+target-version = "py310"
 [tool.ruff.lint]
 select = [
     "E",   # pycodestyle errors
@@ -232,7 +232,7 @@ select = [
     "UP",  # pyupgrade
     "SIM", # flake8-simplify
 ]
-ignore = ["E501", "B008", "C901", "E722", "F401", "B018", "B027", "F402", "B904", "C401", "B007", "SIM102", "E402", "B017"]
+ignore = ["E501", "B008", "C901", "E722", "F401", "B018", "B027", "F402", "B904", "C401", "B007", "SIM102", "E402", "B017", "B905", "UP035", "UP006", "UP007", "UP045"]
 
 [tool.mypy]
 python_version = "3.11"
