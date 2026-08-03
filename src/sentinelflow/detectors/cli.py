@@ -31,14 +31,14 @@ def run_detector(args: argparse.Namespace) -> None:
 
 def run_graph(args: argparse.Namespace) -> None:
     """Run the Neo4j graph engine standalone."""
-    from sentinelflow.processor.graph_engine import main as graph_main
+    from sentinelflow.processor.graph_engine import main as graph_main  # type: ignore
 
     graph_main()
 
 
 def run_geo(args: argparse.Namespace) -> None:
     """Run the Redis geo-detection standalone."""
-    from sentinelflow.processor.redis_geo import main as geo_main
+    from sentinelflow.processor.redis_geo import main as geo_main  # type: ignore
 
     geo_main()
 

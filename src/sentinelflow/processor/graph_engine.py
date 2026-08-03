@@ -49,8 +49,8 @@ try:
 
     HAS_NEO4J = True
 except ImportError:
-    Driver = GraphDatabase = Session = None
-    Neo4jError = ServiceUnavailable = Exception
+    Driver = GraphDatabase = Session = Any  # type: ignore
+    Neo4jError = ServiceUnavailable = Exception  # type: ignore
     HAS_NEO4J = False
 
 from sentinelflow.config import get_settings
