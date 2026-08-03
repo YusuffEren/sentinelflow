@@ -22,5 +22,12 @@ __email__ = "team@sentinelflow.dev"
 
 from typing import Final
 
+try:
+    from dotenv import load_dotenv
+
+    load_dotenv()
+except ImportError:
+    pass
+
 # Package constants
 PACKAGE_NAME: Final[str] = "sentinelflow"

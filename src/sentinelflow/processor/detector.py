@@ -515,7 +515,7 @@ class FraudDetectorService:
                 new_latitude=latitude,
                 new_longitude=longitude,
                 new_timestamp=timestamp,
-                max_speed_kmh=900.0,  # Commercial jet speed
+                max_speed_kmh=self.settings.fraud.max_travel_speed_kmh,
             )
 
             # Update location for future checks

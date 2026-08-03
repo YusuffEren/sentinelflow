@@ -496,6 +496,11 @@ async def metrics():
 
 def main():
     """Run the API server."""
+    try:
+        from dotenv import load_dotenv
+        load_dotenv()
+    except ImportError:
+        pass
     import uvicorn
 
     host = os.getenv("SENTINELFLOW_API_HOST", "0.0.0.0")

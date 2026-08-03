@@ -644,7 +644,7 @@ def main():
     # Get settings
     settings = get_settings()
     kafka_servers = settings.kafka.bootstrap_servers
-    kafka_topic = "fraud_alerts"
+    kafka_topic = settings.kafka.topic_alerts
 
     # Auto-initialize with demo data on first load
     if not st.session_state.demo_initialized:

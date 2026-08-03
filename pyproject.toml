@@ -76,9 +76,10 @@ dependencies = [
     # =============================================================================
     # Web Framework & API
     # =============================================================================
-    "fastapi>=0.109.0",
+    "fastapi>=0.110.0",
     "uvicorn[standard]>=0.27.0",
     "httpx>=0.26.0",
+    "python-multipart>=0.0.6",
     
     # =============================================================================
     # Dashboard & Visualization
@@ -87,6 +88,7 @@ dependencies = [
     "plotly>=5.18.0",
     "pyvis>=0.3.2",
     "networkx>=3.2.0",
+    "matplotlib>=3.8.0",
     
     # =============================================================================
     # NLP & Text Processing
@@ -98,12 +100,6 @@ dependencies = [
     # =============================================================================
     "asyncio-throttle>=1.0.2",
     "aiofiles>=23.2.1",
-    
-    # =============================================================================
-    # Web API
-    # =============================================================================
-    "fastapi>=0.110.0",
-    "uvicorn[standard]>=0.27.0",
     
     # =============================================================================
     # Geospatial
@@ -254,3 +250,7 @@ python_files = ["test_*.py"]
 python_functions = ["test_*"]
 asyncio_mode = "auto"
 addopts = "-v --tb=short --strict-markers"
+markers = [
+    "integration: marks tests as integration tests (require external services)",
+    "slow: marks tests as slow running",
+]

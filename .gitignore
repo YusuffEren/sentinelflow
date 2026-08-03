@@ -14,7 +14,7 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
+/lib/
 lib64/
 parts/
 sdist/
@@ -62,6 +62,7 @@ venv.bak/
 # IDE
 .idea/
 .vscode/
+.cursor/
 *.swp
 *.swo
 *~
@@ -87,10 +88,14 @@ dmypy.json
 *.log
 logs/
 data/
+models/
 *.csv
-*.json
-!package.json
 *.parquet
+
+# Runtime / generated outputs
+mlops/drift_reports/
+mlops_test/
+catboost_info/
 
 # Frontend (Next.js)
 .next/
@@ -98,6 +103,7 @@ data/
 sentinelflow-web/.next/
 node_modules/
 sentinelflow-web/node_modules/
+*.tsbuildinfo
 
 # opencode (agent config/skills - not project code)
 .opencode/

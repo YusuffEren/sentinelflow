@@ -11,14 +11,16 @@ and .env files, following the 12-factor app methodology.
 from functools import lru_cache
 from typing import Optional
 
-from pydantic import Field, field_validator
+from pydantic import AliasChoices, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+_ENV_FILE_CONFIG = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
 
 
 class KafkaSettings(BaseSettings):
     """Kafka connection and topic configuration."""
 
-    model_config = SettingsConfigDict(env_prefix="KAFKA_")
+    model_config = SettingsConfigDict(env_prefix="KAFKA_", **_ENV_FILE_CONFIG)
 
     bootstrap_servers: str = Field(default="localhost:9092", description="Kafka broker addresses")
     topic_transactions: str = Field(
@@ -31,7 +33,7 @@ class KafkaSettings(BaseSettings):
 class Neo4jSettings(BaseSettings):
     """Neo4j graph database configuration."""
 
-    model_config = SettingsConfigDict(env_prefix="NEO4J_")
+    model_config = SettingsConfigDict(env_prefix="NEO4J_", **_ENV_FILE_CONFIG)
 
     uri: str = Field(default="bolt://localhost:7687", description="Neo4j Bolt protocol URI")
     user: str = Field(default="neo4j", description="Neo4j username")
@@ -42,7 +44,7 @@ class Neo4jSettings(BaseSettings):
 class RedisSettings(BaseSettings):
     """Redis cache and geo configuration."""
 
-    model_config = SettingsConfigDict(env_prefix="REDIS_")
+    model_config = SettingsConfigDict(env_prefix="REDIS_", **_ENV_FILE_CONFIG)
 
     host: str = Field(default="localhost", description="Redis host")
     port: int = Field(default=6379, description="Redis port")
@@ -59,15 +61,33 @@ class RedisSettings(BaseSettings):
 class FraudDetectionSettings(BaseSettings):
     """Fraud detection thresholds and parameters."""
 
+    model_config = SettingsConfigDict(**_ENV_FILE_CONFIG, populate_by_name=True)
+
     # Circular transaction detection
-    circular_min_depth: int = Field(default=3, ge=2, description="Minimum cycle length to detect")
-    circular_max_depth: int = Field(default=6, le=10, description="Maximum cycle length to search")
+    circular_min_depth: int = Field(
+        default=3,
+        ge=2,
+        validation_alias=AliasChoices("circular_min_depth", "CIRCULAR_TRANSACTION_MIN_DEPTH"),
+        description="Minimum cycle length to detect",
+    )
+    circular_max_depth: int = Field(
+        default=6,
+        le=10,
+        validation_alias=AliasChoices("circular_max_depth", "CIRCULAR_TRANSACTION_MAX_DEPTH"),
+        description="Maximum cycle length to search",
+    )
 
     # Impossible travel detection
     max_travel_speed_kmh: float = Field(
-        default=900.0, description="Maximum plausible travel speed (commercial flight ~900 km/h)"
+        default=900.0,
+        validation_alias=AliasChoices("max_travel_speed_kmh", "IMPOSSIBLE_TRAVEL_MAX_SPEED_KMH"),
+        description="Maximum plausible travel speed (commercial flight ~900 km/h)",
     )
-    time_window_minutes: int = Field(default=30, description="Time window for travel analysis")
+    time_window_minutes: int = Field(
+        default=30,
+        validation_alias=AliasChoices("time_window_minutes", "TRANSACTION_TIME_WINDOW_MINUTES"),
+        description="Time window for travel analysis",
+    )
 
     # NLP blacklist
     blacklist_keywords: list[str] = Field(
@@ -98,7 +118,7 @@ class FraudDetectionSettings(BaseSettings):
 class GeneratorSettings(BaseSettings):
     """Synthetic data generator configuration."""
 
-    model_config = SettingsConfigDict(env_prefix="GENERATOR_")
+    model_config = SettingsConfigDict(env_prefix="GENERATOR_", **_ENV_FILE_CONFIG)
 
     batch_size: int = Field(default=100, ge=1, description="Transactions per batch")
     fraud_ratio: float = Field(

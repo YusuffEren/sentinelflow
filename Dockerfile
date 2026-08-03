@@ -6,7 +6,7 @@
 # -----------------------------------------------------------------------------
 # Stage 1: Builder
 # -----------------------------------------------------------------------------
-FROM python:3.11-slim as builder
+FROM python:3.11-slim AS builder
 
 WORKDIR /app
 
@@ -16,21 +16,23 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies
+# Copy project files needed for build
 COPY pyproject.toml ./
 COPY src/ ./src/
 
+# Build wheel
 RUN pip install --no-cache-dir --upgrade pip && \
-    pip wheel --no-cache-dir --no-deps --wheel-dir /app/wheels -e .
+    pip install --no-cache-dir build && \
+    python -m build --wheel --outdir /app/wheels
 
 # -----------------------------------------------------------------------------
 # Stage 2: Production Runtime
 # -----------------------------------------------------------------------------
-FROM python:3.11-slim as production
+FROM python:3.11-slim AS production
 
 LABEL maintainer="Teknofest Team <team@sentinelflow.dev>"
 LABEL description="SentinelFlow - Real-Time Financial Fraud Detection System"
-LABEL version="2.0.0"
+LABEL version="2.1.0"
 
 # Create non-root user
 RUN groupadd --gid 1000 sentinelflow && \
@@ -43,17 +45,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy wheels from builder
-COPY --from=builder /app/wheels /wheels
-COPY --from=builder /app/src ./src
-
-# Install application
+# Copy and install wheel
+COPY --from=builder /app/wheels/*.whl /tmp/wheels/
 RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir /wheels/* && \
-    pip install --no-cache-dir -e .
+    pip install --no-cache-dir /tmp/wheels/*.whl && \
+    rm -rf /tmp/wheels
 
-# Copy configuration
+# Copy configuration and scripts
 COPY config/ ./config/
+COPY scripts/seed_admin.py ./scripts/seed_admin.py
 
 # Create directories
 RUN mkdir -p /app/logs /app/models /app/data && \
@@ -65,12 +65,11 @@ USER sentinelflow
 # Environment variables
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONPATH=/app/src \
     APP_ENV=production
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8000/health || exit 1
+HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
+    CMD curl -f http://localhost:8000/api/v1/system/health || exit 1
 
 # Expose port
 EXPOSE 8000
