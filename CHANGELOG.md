@@ -23,5 +23,9 @@ versioning follows [Semantic Versioning](https://semver.org/).
 - Dead CLI subcommands (`detectors graph|geo`) targeting non-existent entry points.
 - Echo-only CI jobs (`model-version`, `deploy-staging`, `deploy-production`).
 
+### Fixed
+- CI: pin `bcrypt>=4.0.1,<4.1` (passlib 1.7.4 incompatible with bcrypt>=4.1 — broke JWT tests), coverage floor set to 45%.
+- Frontend called non-existent endpoints (`/graph/nodes`, `/graph/edges`, `/ml/predict`, `/ml/info`); aligned with backend + generated contract snapshot.
+
 ### Security
 - Removed all hardcoded credentials from repo (incl. bcrypt hash of `Admin123!` in migration history).
