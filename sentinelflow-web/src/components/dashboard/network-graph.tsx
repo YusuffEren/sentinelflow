@@ -70,7 +70,7 @@ export function NetworkGraph({
                 include_fraud_only: showFraudOnly.toString(),
             })
             
-            const res = await fetch(getApiUrl(`${config.endpoints.graphNodes}/../data?${params}`))
+            const res = await fetch(getApiUrl(`${config.endpoints.graphData}?${params}`))
             
             if (res.ok) {
                 const data: GraphData = await res.json()

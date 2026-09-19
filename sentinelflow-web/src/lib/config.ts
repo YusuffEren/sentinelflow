@@ -42,16 +42,21 @@ export const config = {
     refresh: "/api/v1/auth/refresh",
 
     // ML
-    predict: "/api/v1/ml/predict",
-    modelInfo: "/api/v1/ml/info",
+    predict: "/api/v1/risk/score",
+    modelInfo: "/api/v1/ml/models",
     explain: "/api/v1/ml/explain",
+    mlFeatures: "/api/v1/ml/features",
+
+    // KYC
+    kycScreen: "/api/v1/kyc/screen",
 
     // Chat
     chat: "/api/v1/chat",
 
-    // Graph
-    graphNodes: "/api/v1/graph/nodes",
-    graphEdges: "/api/v1/graph/edges",
+    // Graph (single source; see backend routes/graph.py)
+    graphData: "/api/v1/graph/data",
+    graphRings: "/api/v1/graph/rings",
+    graphAccount: (iban: string) => `/api/v1/graph/account/${iban}`,
 
     // WebSocket
     wsAlerts: "/ws/alerts",
