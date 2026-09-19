@@ -144,6 +144,12 @@ class GraphEngine:
         self._password = password or os.getenv("NEO4J_PASSWORD") or settings.neo4j.password
         self.database = database
 
+        if not self._password:
+            raise ValueError(
+                "Neo4j password is not configured. Set the NEO4J_PASSWORD "
+                "environment variable (see .env.example)."
+            )
+
         # Initialize driver with connection pooling
         self._driver: Driver | None = None
         self._connect()

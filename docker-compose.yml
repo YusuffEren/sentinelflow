@@ -16,9 +16,9 @@ services:
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_USER: sentinelflow
-      POSTGRES_PASSWORD: sentinelflow_secret
-      POSTGRES_DB: sentinelflow
+      POSTGRES_USER: ${POSTGRES_USER:-sentinelflow}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env (see .env.example)}
+      POSTGRES_DB: ${POSTGRES_DB:-sentinelflow}
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -126,7 +126,7 @@ services:
       - "7474:7474"  # HTTP Browser
       - "7687:7687"  # Bolt Protocol
     environment:
-      NEO4J_AUTH: neo4j/sentinelflow_secret_2024
+      NEO4J_AUTH: neo4j/${NEO4J_PASSWORD:?Set NEO4J_PASSWORD in .env (see .env.example)}
       NEO4J_PLUGINS: '["apoc", "graph-data-science"]'
       NEO4J_dbms_memory_pagecache_size: 512M
       NEO4J_dbms_memory_heap_initial__size: 512M
@@ -231,16 +231,16 @@ services:
     environment:
       POSTGRES_HOST: postgres
       POSTGRES_PORT: 5432
-      POSTGRES_USER: sentinelflow
-      POSTGRES_PASSWORD: sentinelflow_secret
-      POSTGRES_DB: sentinelflow
+      POSTGRES_USER: ${POSTGRES_USER:-sentinelflow}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env (see .env.example)}
+      POSTGRES_DB: ${POSTGRES_DB:-sentinelflow}
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       NEO4J_URI: bolt://neo4j:7687
       NEO4J_USER: neo4j
-      NEO4J_PASSWORD: sentinelflow_secret_2024
+      NEO4J_PASSWORD: ${NEO4J_PASSWORD:?Set NEO4J_PASSWORD in .env (see .env.example)}
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-change-me-in-production}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:?Set JWT_SECRET_KEY in .env (see .env.example)}
       JWT_ALGORITHM: HS256
     networks:
       - sentinelflow-network
@@ -259,6 +259,11 @@ services:
     build:
       context: ./sentinelflow-web
       dockerfile: Dockerfile
+      args:
+        # Browser-facing URLs (baked into the bundle at build time).
+        # Must be reachable from the user's browser, not container-internal.
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+        NEXT_PUBLIC_WS_URL: ${NEXT_PUBLIC_WS_URL:-ws://localhost:8000}
     container_name: sentinelflow-frontend
     hostname: frontend
     depends_on:
@@ -266,8 +271,6 @@ services:
         condition: service_healthy
     ports:
       - "3000:3000"
-    environment:
-      NEXT_PUBLIC_API_URL: http://api:8000
     networks:
       - sentinelflow-network
     restart: unless-stopped

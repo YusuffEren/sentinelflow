@@ -50,9 +50,10 @@ npm run dev
 
 2. **Login sayfasına yönlendirileceksin**: http://localhost:3000/login
 
-3. **Demo credentials ile giriş yap**:
-   - Username: `admin`
-   - Password: `Admin123!`
+3. **Admin kullanıcısını oluştur** (parola otomatik üretilir, ekrana yazdırılır):
+   SEED_ADMIN_PASSWORD=<güçlü-parola> python scripts/seed_admin.py
+
+4. **Login sayfasında** oluşturduğun kullanıcı adı + parola ile giriş yap:
 
 4. **Dashboard'a yönlendirileceksin** ve header'da kullanıcı bilgilerini göreceksin
 
@@ -62,9 +63,9 @@ npm run dev
 
 ### Senaryo 2: JWT Token Flow
 
-1. **Login API çağrısı**:
+1. **Login API çağrısı** (seed_admin ile oluşturduğun bilgilerle):
    ```powershell
-   $body = @{ username = "admin"; password = "Admin123!" } | ConvertTo-Json
+   $body = @{ username = "admin"; password = "<SEED_ADMIN_PASSWORD>" } | ConvertTo-Json
    Invoke-RestMethod -Uri http://localhost:8000/api/v1/auth/login -Method POST -Body $body -ContentType "application/json"
    ```
 

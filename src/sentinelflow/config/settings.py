@@ -37,7 +37,10 @@ class Neo4jSettings(BaseSettings):
 
     uri: str = Field(default="bolt://localhost:7687", description="Neo4j Bolt protocol URI")
     user: str = Field(default="neo4j", description="Neo4j username")
-    password: str = Field(default="sentinelflow_secret_2024", description="Neo4j password")
+    password: str = Field(
+        default="",
+        description="Neo4j password. MUST be set via NEO4J_PASSWORD env (see .env.example).",
+    )
     database: str = Field(default="neo4j", description="Neo4j database name")
 
 

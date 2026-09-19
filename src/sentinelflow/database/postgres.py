@@ -28,9 +28,12 @@ def get_database_url(async_driver: bool = False) -> str:
         POSTGRES_HOST: Database host (default: localhost)
         POSTGRES_PORT: Database port (default: 5432)
         POSTGRES_USER: Database user (default: sentinelflow)
-        POSTGRES_PASSWORD: Database password (default: sentinelflow_secret)
+        POSTGRES_PASSWORD: Database password (REQUIRED, no default)
         POSTGRES_DB: Database name (default: sentinelflow)
         DATABASE_URL: Full URL override (takes precedence)
+
+    Raises:
+        ValueError: If POSTGRES_PASSWORD is not set.
     """
     # Check for full URL override
     full_url = os.getenv("DATABASE_URL")
@@ -42,8 +45,14 @@ def get_database_url(async_driver: bool = False) -> str:
     host = os.getenv("POSTGRES_HOST", "localhost")
     port = os.getenv("POSTGRES_PORT", "5432")
     user = os.getenv("POSTGRES_USER", "sentinelflow")
-    password = os.getenv("POSTGRES_PASSWORD", "sentinelflow_secret")
+    password = os.getenv("POSTGRES_PASSWORD", "")
     database = os.getenv("POSTGRES_DB", "sentinelflow")
+
+    if not password:
+        raise ValueError(
+            "POSTGRES_PASSWORD is not set. Refusing to connect with an empty "
+            "password. Set it in the environment or .env (see .env.example)."
+        )
 
     if async_driver:
         return f"postgresql+asyncpg://{user}:{password}@{host}:{port}/{database}"

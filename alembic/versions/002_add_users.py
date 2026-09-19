@@ -73,24 +73,10 @@ def upgrade() -> None:
     )
 
     # ==========================================================================
-    # Create default admin user
-    # Password: Admin123! (hashed with bcrypt)
+    # NOTE: No default admin user is created here on purpose.
+    # Use scripts/seed_admin.py (SEED_ADMIN_PASSWORD) to create the admin user
+    # so that no well-known credentials ever exist in the database history.
     # ==========================================================================
-    op.execute(
-        """
-        INSERT INTO users (user_id, username, email, password_hash, full_name, role, status)
-        VALUES (
-            'USR-ADMIN000001',
-            'admin',
-            'admin@sentinelflow.dev',
-            '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/X4.GQzPJLvCXpRqGK',
-            'System Administrator',
-            'admin',
-            'active'
-        )
-        ON CONFLICT (username) DO NOTHING;
-    """
-    )
 
 
 def downgrade() -> None:
