@@ -481,8 +481,7 @@ def main():
         st.markdown("---")
 
         st.markdown("### 📊 Benchmark Bilgileri")
-        st.info(
-            """
+        st.info("""
         **Geçen Yıl 1. (2025)**
         - Doğruluk: %99.2
         - Veri Seti: 200K işlem
@@ -490,8 +489,7 @@ def main():
         **Hedefimiz (2026)**
         - Doğruluk: %99.5+
         - Veri Seti: 500K+ işlem
-        """
-        )
+        """)
 
     # Mock data (would be replaced with real data from ML pipeline)
     metrics = {
@@ -664,8 +662,7 @@ def main():
 
             total = tp + tn + fp + fn
 
-            st.markdown(
-                f"""
+            st.markdown(f"""
             | Metrik | Değer |
             |--------|-------|
             | **True Positives** | {tp:,} |
@@ -676,8 +673,7 @@ def main():
             | **Precision** | {tp / (tp + fp) * 100:.2f}% |
             | **Recall** | {tp / (tp + fn) * 100:.2f}% |
             | **Specificity** | {tn / (tn + fp) * 100:.2f}% |
-            """
-            )
+            """)
 
     with tab3:
         st.markdown("### 🔬 Feature Importance Analizi")
@@ -712,40 +708,34 @@ def main():
         col1, col2, col3 = st.columns(3)
 
         with col1:
-            st.markdown(
-                """
+            st.markdown("""
             **Davranışsal Özellikler (8)**
             - amount_deviation_score
             - velocity_deviation_score
             - receiver_novelty_score
             - hour_deviation_score
             - ...
-            """
-            )
+            """)
 
         with col2:
-            st.markdown(
-                """
+            st.markdown("""
             **Risk Özellikleri (5)**
             - composite_risk_score
             - structuring_detection_score
             - masak_threshold_proximity
             - mule_account_score
             - ...
-            """
-            )
+            """)
 
         with col3:
-            st.markdown(
-                """
+            st.markdown("""
             **Graf Özellikleri (6)**
             - ring_participation_count
             - neighbor_fraud_ratio
             - pagerank_score
             - community_fraud_ratio
             - ...
-            """
-            )
+            """)
 
     with tab4:
         st.markdown("### ⚡ Performans Analizi")
@@ -762,8 +752,7 @@ def main():
                 use_container_width=True,
             )
 
-            st.markdown(
-                f"""
+            st.markdown(f"""
             **Latency İstatistikleri:**
             - Ortalama: {np.mean(latencies):.1f}ms
             - Median: {np.median(latencies):.1f}ms
@@ -771,8 +760,7 @@ def main():
             - P99: {np.percentile(latencies, 99):.1f}ms
             - Min: {np.min(latencies):.1f}ms
             - Max: {np.max(latencies):.1f}ms
-            """
-            )
+            """)
 
         with col2:
             st.markdown("#### 🎯 Performans Hedefleri")
@@ -810,9 +798,7 @@ def main():
         <br>
         <small>Son güncelleme: {}</small>
     </div>
-    """.format(
-            datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        ),
+    """.format(datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
         unsafe_allow_html=True,
     )
 

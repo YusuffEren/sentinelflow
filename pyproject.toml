@@ -152,8 +152,8 @@ dev = [
     "pytest>=7.4.0",
     "pytest-asyncio>=0.23.0",
     "pytest-cov>=4.1.0",
-    "black>=24.1.0",
-    "ruff>=0.1.14",
+    "black>=26.5,<27",
+    "ruff>=0.15.22,<0.16",
     "mypy>=1.8.0",
     "pre-commit>=3.6.0",
     "ipython>=8.20.0",
@@ -205,7 +205,9 @@ packages = ["src/sentinelflow"]
 
 [tool.black]
 line-length = 100
-target-version = ['py310', 'py311', 'py312']
+# Pin to the lowest supported version: black's AST safety check on a 3.11
+# runner warns/fails when py312 is listed as target.
+target-version = ['py310']
 include = '\.pyi?$'
 extend-exclude = '''
 /(
