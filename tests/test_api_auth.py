@@ -98,16 +98,12 @@ class TestAlertsAuth:
         # graph/data has no DB dependency beyond auth and falls back to mock
         # data when Neo4j is unavailable, so it exercises a protected endpoint.
         client, viewer_token, _ = auth_client
-        resp = client.get(
-            "/api/v1/graph/data", headers={"Authorization": f"Bearer {viewer_token}"}
-        )
+        resp = client.get("/api/v1/graph/data", headers={"Authorization": f"Bearer {viewer_token}"})
         assert resp.status_code != 401
 
     def test_list_alerts_rejects_bad_token(self, auth_client):
         client, _, _ = auth_client
-        resp = client.get(
-            "/api/v1/alerts", headers={"Authorization": "Bearer not.a.token"}
-        )
+        resp = client.get("/api/v1/alerts", headers={"Authorization": "Bearer not.a.token"})
         assert resp.status_code == 401
 
 
@@ -168,9 +164,7 @@ class TestTransactionsAuth:
 
         monkeypatch.setattr(app_module, "_INGEST_API_KEY", "test-secret-key")
         client, _, _ = auth_client
-        resp = client.post(
-            "/api/v1/transactions", json=_TX, headers={"X-API-Key": "wrong-key"}
-        )
+        resp = client.post("/api/v1/transactions", json=_TX, headers={"X-API-Key": "wrong-key"})
         assert resp.status_code == 401
 
 

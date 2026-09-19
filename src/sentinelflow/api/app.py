@@ -196,6 +196,7 @@ yapay zeka destekli dolandırıcılık tespit platformu.
     lifespan=lifespan,
 )
 
+
 # CORS
 #
 # CORS_ORIGINS (comma-separated): browsable frontend origins, e.g.

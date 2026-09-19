@@ -33,7 +33,6 @@ from pydantic import BaseModel, Field
 
 from sentinelflow.auth.dependencies import require_analyst, require_viewer
 from sentinelflow.contracts import User
-
 from sentinelflow.ml.advanced_features import ADVANCED_FEATURE_NAMES, AdvancedFeatureEngine
 
 # Feature engines
