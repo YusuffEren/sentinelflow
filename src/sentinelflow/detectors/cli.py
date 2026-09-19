@@ -29,20 +29,6 @@ def run_detector(args: argparse.Namespace) -> None:
     detector_main()
 
 
-def run_graph(args: argparse.Namespace) -> None:
-    """Run the Neo4j graph engine standalone."""
-    from sentinelflow.processor.graph_engine import main as graph_main  # type: ignore
-
-    graph_main()
-
-
-def run_geo(args: argparse.Namespace) -> None:
-    """Run the Redis geo-detection standalone."""
-    from sentinelflow.processor.redis_geo import main as geo_main  # type: ignore
-
-    geo_main()
-
-
 def main() -> None:
     """Main CLI entry point for detection commands."""
     parser = argparse.ArgumentParser(
@@ -52,8 +38,6 @@ def main() -> None:
 Examples:
   python -m sentinelflow.detectors run
   python -m sentinelflow.detectors run --kafka-servers localhost:9092
-  python -m sentinelflow.detectors graph
-  python -m sentinelflow.detectors geo
         """,
     )
 
@@ -67,14 +51,6 @@ Examples:
     run_parser.add_argument("--topic", default="transactions", help="Kafka topic")
     run_parser.add_argument("--group", default="sentinelflow-consumers", help="Consumer group")
     run_parser.set_defaults(func=run_detector)
-
-    # Run graph engine
-    graph_parser = subparsers.add_parser("graph", help="Run Neo4j graph engine")
-    graph_parser.set_defaults(func=run_graph)
-
-    # Run geo detection
-    geo_parser = subparsers.add_parser("geo", help="Run Redis geo-detection")
-    geo_parser.set_defaults(func=run_geo)
 
     args = parser.parse_args()
 
