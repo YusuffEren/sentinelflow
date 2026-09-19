@@ -16,6 +16,8 @@ from sentinelflow.api.schemas import (
     CaseListResponse,
     CaseUpdate,
 )
+from sentinelflow.auth.dependencies import require_analyst, require_viewer
+from sentinelflow.contracts import User
 
 router = APIRouter(prefix="/cases", tags=["Cases"])
 
@@ -34,6 +36,7 @@ async def list_cases(
     assigned_to: str | None = Query(None, description="Filter by assignee"),
     is_open: bool | None = Query(None, description="Filter open/closed cases"),
     session=Depends(get_db_session),
+    _user: User = Depends(require_viewer),
 ):
     """List cases with pagination and filtering."""
     from sentinelflow.repository import CaseRepository
@@ -64,6 +67,7 @@ async def list_cases(
 )
 async def get_case_stats(
     session=Depends(get_db_session),
+    _user: User = Depends(require_viewer),
 ):
     """Get case statistics."""
     from sentinelflow.repository import CaseRepository
@@ -81,6 +85,7 @@ async def get_case_stats(
 async def create_case(
     case_data: CaseCreate,
     session=Depends(get_db_session),
+    _user: User = Depends(require_analyst),
 ):
     """Create a new case."""
     from sentinelflow.repository import CaseRepository, EventRepository
@@ -106,6 +111,7 @@ async def create_case(
 async def get_case(
     case_id: str,
     session=Depends(get_db_session),
+    _user: User = Depends(require_viewer),
 ):
     """Get a specific case by ID."""
     from sentinelflow.repository import CaseRepository
@@ -128,6 +134,7 @@ async def update_case(
     case_id: str,
     update_data: CaseUpdate,
     session=Depends(get_db_session),
+    user: User = Depends(require_analyst),
 ):
     """Update case fields."""
     from sentinelflow.repository import CaseRepository, EventRepository
@@ -158,7 +165,7 @@ async def update_case(
 
     # Add note if provided
     if update_data.note:
-        event_repo.log_note_added(case_id, update_data.note, actor="system")  # TODO: actual user
+        event_repo.log_note_added(case_id, update_data.note, actor=user.username)
 
     session.commit()
 
@@ -175,6 +182,7 @@ async def assign_case(
     assigned_to: str = Query(..., description="Username to assign to"),
     assigned_team: str | None = Query(None, description="Team name"),
     session=Depends(get_db_session),
+    _user: User = Depends(require_analyst),
 ):
     """Assign case to analyst/team."""
     from sentinelflow.repository import CaseRepository, EventRepository
@@ -202,6 +210,7 @@ async def add_alert_to_case(
     case_id: str,
     alert_id: str,
     session=Depends(get_db_session),
+    _user: User = Depends(require_analyst),
 ):
     """Add an alert to an existing case."""
     from sentinelflow.repository import CaseRepository, EventRepository
@@ -231,6 +240,7 @@ async def get_case_events(
     page_size: int = Query(50, ge=1, le=100),
     event_type: str | None = Query(None),
     session=Depends(get_db_session),
+    _user: User = Depends(require_viewer),
 ):
     """Get audit log events for a case."""
     from sentinelflow.repository import EventRepository

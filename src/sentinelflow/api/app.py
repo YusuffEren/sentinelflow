@@ -19,7 +19,7 @@ import time
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import Depends, FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
 
@@ -31,6 +31,7 @@ from sentinelflow.api.routes.auth import router as auth_router
 from sentinelflow.api.routes.cases import router as cases_router
 from sentinelflow.api.routes.chat import router as chat_router
 from sentinelflow.api.routes.graph import router as graph_router
+from sentinelflow.api.routes.kyc import router as kyc_router
 from sentinelflow.api.routes.ml import router as ml_router
 from sentinelflow.api.schemas import (
     SCHEMA_VERSION,
@@ -41,6 +42,8 @@ from sentinelflow.api.schemas import (
     TransactionCreate,
     TransactionResponse,
 )
+from sentinelflow.auth.dependencies import get_current_user
+from sentinelflow.contracts import User
 
 # =============================================================================
 # Application State
@@ -194,12 +197,27 @@ yapay zeka destekli dolandırıcılık tespit platformu.
 )
 
 # CORS
+#
+# CORS_ORIGINS (comma-separated): browsable frontend origins, e.g.
+#   CORS_ORIGINS="http://localhost:3000,https://app.example.com"
+# If unset, defaults to the local dev frontend. "*" keeps the legacy open
+# mode but then credentials MUST be disabled (cookies/Auth headers).
+def _cors_settings() -> tuple[list[str], bool]:
+    raw = os.getenv("CORS_ORIGINS", "http://localhost:3000").strip()
+    if raw == "*":
+        return ["*"], False
+    origins = [o.strip() for o in raw.split(",") if o.strip()]
+    return origins or ["http://localhost:3000"], True
+
+
+_cors_origins, _cors_allow_credentials = _cors_settings()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=_cors_origins,
+    allow_credentials=_cors_allow_credentials,
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-API-Key"],
+    expose_headers=["X-Request-Id"],
 )
 
 # Include routers
@@ -209,6 +227,7 @@ app.include_router(cases_router, prefix="/api/v1")
 app.include_router(ml_router, prefix="/api/v1")
 app.include_router(graph_router, prefix="/api/v1")
 app.include_router(chat_router, prefix="/api/v1")
+app.include_router(kyc_router, prefix="/api/v1")
 app.include_router(risk_router)
 
 
@@ -217,13 +236,50 @@ app.include_router(risk_router)
 # =============================================================================
 
 
+# =============================================================================
+# Transaction Ingest Auth
+# =============================================================================
+
+# Optional legacy API key for service-to-service transaction ingestion.
+# Set SENTINELFLOW_API_KEY in the environment to enable this fallback.
+_INGEST_API_KEY = os.getenv("SENTINELFLOW_API_KEY", "")
+
+
+async def require_ingest_auth(
+    request: Request,
+    user: User | None = Depends(get_current_user),
+) -> None:
+    """
+    Guard the transaction ingestion endpoint.
+
+    Accepts either:
+    - A valid JWT bearer token for an active user, or
+    - A legacy ``X-API-Key`` header matching SENTINELFLOW_API_KEY (when set).
+    """
+    if user is not None:
+        return
+
+    api_key = request.headers.get("x-api-key")
+    if _INGEST_API_KEY and api_key and api_key == _INGEST_API_KEY:
+        return
+
+    raise HTTPException(
+        status_code=401,
+        detail="Authentication required (JWT bearer token or valid X-API-Key)",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+
 @app.post(
     "/api/v1/transactions",
     response_model=TransactionResponse,
     tags=["Transactions"],
     summary="Submit a transaction for fraud analysis",
 )
-async def submit_transaction(tx: TransactionCreate) -> TransactionResponse:
+async def submit_transaction(
+    tx: TransactionCreate,
+    _auth: None = Depends(require_ingest_auth),
+) -> TransactionResponse:
     """Analyze a transaction for fraud."""
     from sentinelflow.api.deps import get_db_session
     from sentinelflow.processor.alert_writer import create_alert_from_detection

@@ -21,9 +21,12 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from loguru import logger
 from pydantic import BaseModel, Field
+
+from sentinelflow.auth.dependencies import require_viewer
+from sentinelflow.contracts import User
 
 router = APIRouter(prefix="/chat", tags=["Chat"])
 
@@ -260,7 +263,7 @@ Bu tespitin nedeni, sistemin yukarıdaki kalıpları bu işlemde tespit etmiş o
 
 @router.post("", response_model=ChatResponse)
 @router.post("/", response_model=ChatResponse)
-async def chat(message: ChatMessage) -> ChatResponse:
+async def chat(message: ChatMessage, _user: User = Depends(require_viewer)) -> ChatResponse:
     """
     Process a chat message and return AI response.
 
@@ -286,7 +289,7 @@ async def chat(message: ChatMessage) -> ChatResponse:
 
 
 @router.get("/suggestions")
-async def get_suggestions() -> list[str]:
+async def get_suggestions(_user: User = Depends(require_viewer)) -> list[str]:
     """Get suggested questions for the chat interface."""
     return [
         "Döngüsel transfer nedir?",
@@ -298,7 +301,9 @@ async def get_suggestions() -> list[str]:
 
 
 @router.get("/knowledge/{fraud_type}")
-async def get_fraud_knowledge(fraud_type: str) -> dict[str, Any]:
+async def get_fraud_knowledge(
+    fraud_type: str, _user: User = Depends(require_viewer)
+) -> dict[str, Any]:
     """Get detailed knowledge about a specific fraud type."""
     if fraud_type not in FRAUD_KNOWLEDGE:
         raise HTTPException(status_code=404, detail=f"Unknown fraud type: {fraud_type}")

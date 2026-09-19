@@ -52,6 +52,23 @@ def mock_db_session():
     # Override the dependency
     app.dependency_overrides[deps.get_db_session] = lambda: mock_session
 
+    # Bypass JWT auth in API tests: make get_current_active_user return a fake
+    # analyst. require_viewer/require_analyst both resolve through
+    # get_current_active_user, so overriding it unlocks all protected routes.
+    # (test_api_auth.py verifies the real JWT flow end-to-end.)
+    from sentinelflow.auth import dependencies as auth_deps
+    from sentinelflow.contracts import User, UserRole
+
+    fake_user = User(
+        user_id="USR-TEST",
+        username="tester",
+        email="tester@example.com",
+        full_name="Test User",
+        role=UserRole.ANALYST,
+    )
+    app.dependency_overrides[auth_deps.get_current_active_user] = lambda: fake_user
+    app.dependency_overrides[auth_deps.get_current_user] = lambda: fake_user
+
     yield mock_session
 
     # Clean up overrides after test

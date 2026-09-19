@@ -16,6 +16,8 @@ from sentinelflow.api.schemas import (
     Alert,
     AlertListResponse,
 )
+from sentinelflow.auth.dependencies import require_analyst, require_viewer
+from sentinelflow.contracts import User
 
 router = APIRouter(prefix="/alerts", tags=["Alerts"])
 
@@ -37,6 +39,7 @@ async def list_alerts(
     sender_iban: str | None = Query(None, description="Filter by sender IBAN"),
     receiver_iban: str | None = Query(None, description="Filter by receiver IBAN"),
     session=Depends(get_db_session),
+    _user: User = Depends(require_viewer),
 ):
     """List alerts with pagination and filtering."""
     from sentinelflow.repository import AlertRepository
@@ -77,6 +80,7 @@ async def get_alert_stats(
     start_date: datetime | None = Query(None),
     end_date: datetime | None = Query(None),
     session=Depends(get_db_session),
+    _user: User = Depends(require_viewer),
 ):
     """Get alert statistics."""
     from sentinelflow.repository import AlertRepository
@@ -96,6 +100,7 @@ async def get_alert_stats(
 async def get_alert(
     alert_id: str,
     session=Depends(get_db_session),
+    _user: User = Depends(require_viewer),
 ):
     """Get a specific alert by ID."""
     from sentinelflow.repository import AlertRepository
@@ -119,14 +124,14 @@ async def dismiss_alert(
     alert_id: str,
     reason: str = Query(None, description="Dismissal reason"),
     session=Depends(get_db_session),
+    user: User = Depends(require_analyst),
 ):
     """Dismiss an alert."""
     from sentinelflow.repository import AlertRepository
 
     repo = AlertRepository(session)
 
-    # TODO: Get actual user from JWT
-    alert = repo.dismiss(alert_id, dismissed_by="system", reason=reason)
+    alert = repo.dismiss(alert_id, dismissed_by=user.username, reason=reason)
 
     if not alert:
         raise HTTPException(status_code=404, detail=f"Alert {alert_id} not found")
@@ -145,6 +150,7 @@ async def link_alert_to_case(
     alert_id: str,
     case_id: str,
     session=Depends(get_db_session),
+    _user: User = Depends(require_analyst),
 ):
     """Link an alert to a case."""
     from sentinelflow.repository import AlertRepository, EventRepository

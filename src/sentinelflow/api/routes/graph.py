@@ -16,9 +16,12 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from loguru import logger
 from pydantic import BaseModel, Field
+
+from sentinelflow.auth.dependencies import require_viewer
+from sentinelflow.contracts import User
 
 router = APIRouter(prefix="/graph", tags=["Graph"])
 
@@ -105,6 +108,7 @@ async def get_graph_data(
     limit: int = Query(default=100, ge=1, le=1000),
     hours: int = Query(default=24, ge=1, le=168),
     include_fraud_only: bool = Query(default=False),
+    _user: User = Depends(require_viewer),
 ) -> GraphData:
     """
     Get transaction network graph data for visualization.
@@ -208,6 +212,7 @@ async def get_fraud_rings(
     min_depth: int = Query(default=3, ge=2, le=10),
     max_depth: int = Query(default=6, ge=3, le=10),
     limit: int = Query(default=10, ge=1, le=50),
+    _user: User = Depends(require_viewer),
 ) -> list[FraudRing]:
     """
     Get detected fraud rings (circular transaction patterns).
@@ -241,6 +246,7 @@ async def get_fraud_rings(
 async def get_account_network(
     iban: str,
     depth: int = Query(default=2, ge=1, le=4),
+    _user: User = Depends(require_viewer),
 ) -> GraphData:
     """
     Get transaction network centered on a specific account.

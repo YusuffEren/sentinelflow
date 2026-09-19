@@ -27,9 +27,12 @@ from typing import Any
 from uuid import uuid4
 
 import numpy as np
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from loguru import logger
 from pydantic import BaseModel, Field
+
+from sentinelflow.auth.dependencies import require_analyst, require_viewer
+from sentinelflow.contracts import User
 
 from sentinelflow.ml.advanced_features import ADVANCED_FEATURE_NAMES, AdvancedFeatureEngine
 
@@ -613,7 +616,9 @@ def get_engine() -> RiskScoringEngine:
     summary="Real-time risk scoring",
     description="Score a single transaction for fraud risk. Target latency: <30ms",
 )
-async def score_transaction(request: RiskScoringRequest) -> RiskScoringResponse:
+async def score_transaction(
+    request: RiskScoringRequest, _user: User = Depends(require_analyst)
+) -> RiskScoringResponse:
     """
     Real-time fraud risk scoring.
 
@@ -635,7 +640,9 @@ async def score_transaction(request: RiskScoringRequest) -> RiskScoringResponse:
     summary="Batch risk scoring",
     description="Score multiple transactions in parallel",
 )
-async def score_batch(request: BatchRiskRequest) -> BatchRiskResponse:
+async def score_batch(
+    request: BatchRiskRequest, _user: User = Depends(require_analyst)
+) -> BatchRiskResponse:
     """Batch risk scoring with parallel processing."""
     engine = get_engine()
     return await engine.score_batch(request.transactions, request.parallel)
@@ -645,7 +652,7 @@ async def score_batch(request: BatchRiskRequest) -> BatchRiskResponse:
     "/stats",
     summary="Risk scoring statistics",
 )
-async def get_stats() -> dict[str, Any]:
+async def get_stats(_user: User = Depends(require_viewer)) -> dict[str, Any]:
     """Get risk scoring engine statistics."""
     engine = get_engine()
     return {
@@ -660,7 +667,7 @@ async def get_stats() -> dict[str, Any]:
     "/features",
     summary="List available features",
 )
-async def list_features() -> dict[str, Any]:
+async def list_features(_user: User = Depends(require_viewer)) -> dict[str, Any]:
     """List all available features and their descriptions."""
     engine = get_engine()
     return {

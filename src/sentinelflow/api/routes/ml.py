@@ -20,7 +20,7 @@ from sentinelflow.api.schemas import (
     TrainRequest,
     TrainResponse,
 )
-from sentinelflow.auth.dependencies import require_analyst
+from sentinelflow.auth.dependencies import require_analyst, require_viewer
 from sentinelflow.contracts import User
 
 router = APIRouter(prefix="/ml", tags=["Machine Learning"])
@@ -40,7 +40,7 @@ _training_status = {
     summary="Get ML model status",
     description="Returns the status of all ML models in the ensemble.",
 )
-async def get_model_status():
+async def get_model_status(_user: User = Depends(require_viewer)):
     """Get status of ML models."""
     try:
 
@@ -147,7 +147,7 @@ async def train_models(
     "/train/status",
     summary="Get training status",
 )
-async def get_training_status():
+async def get_training_status(_user: User = Depends(require_analyst)):
     """Get current training status."""
     global _training_status
 
@@ -197,7 +197,7 @@ async def _run_training(n_samples: int, fraud_ratio: float):
     summary="Get feature definitions",
     description="Returns the list of features used by the ML ensemble.",
 )
-async def get_features():
+async def get_features(_user: User = Depends(require_viewer)):
     """Get ML feature definitions."""
     try:
         from sentinelflow.ml.feature_engine import FEATURE_DESCRIPTIONS, FEATURE_NAMES
