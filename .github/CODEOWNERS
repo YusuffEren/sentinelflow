@@ -1,0 +1,37 @@
+# CODEOWNERS — domain reviewers (replace @handles with real GitHub usernames)
+#
+# Backend core
+/src/sentinelflow/api/        @YusuffEren
+/src/sentinelflow/auth/       @YusuffEren
+/src/sentinelflow/security/   @YusuffEren
+/src/sentinelflow/config/     @YusuffEren
+
+# Detection engines
+/src/sentinelflow/processor/  @YusuffEren
+/src/sentinelflow/detectors/  @YusuffEren
+/src/sentinelflow/generator/  @YusuffEren
+/src/sentinelflow/ingestor/   @YusuffEren
+
+# Data & intelligence
+/src/sentinelflow/ml/         @YusuffEren
+/src/sentinelflow/mlops/      @YusuffEren
+/src/sentinelflow/kyc/        @YusuffEren
+/src/sentinelflow/compliance/ @YusuffEren
+/src/sentinelflow/database/   @YusuffEren
+/src/sentinelflow/repository/ @YusuffEren
+/alembic/                     @YusuffEren
+
+# Frontend
+/sentinelflow-web/            @YusuffEren
+
+# Platform / CI / secrets
+/.github/                     @YusuffEren
+/docker-compose.yml           @YusuffEren
+/Dockerfile                   @YusuffEren
+/.env.example                 @YusuffEren
+
+# Tests must be reviewed by a backend owner as well
+/tests/                       @YusuffEren
+
+# Docs & process
+*.md                          @YusuffEren

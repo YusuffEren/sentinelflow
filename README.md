@@ -6,14 +6,14 @@
 
 **Real-Time Enterprise Financial Fraud Detection & Anti-Money Laundering (AML) Platform**
 
-[![Python Version](https://img.shields.io/badge/python-3.9%20%7C%203.10%20%7C%203.11-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
+[![Python Version](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com)
 [![Next.js 16](https://img.shields.io/badge/Next.js-16-000000?style=for-the-badge&logo=next.js&logoColor=white)](https://nextjs.org)
 [![Apache Kafka](https://img.shields.io/badge/Apache%20Kafka-231F20?style=for-the-badge&logo=apachekafka&logoColor=white)](https://kafka.apache.org)
 [![Neo4j](https://img.shields.io/badge/Neo4j-008CC1?style=for-the-badge&logo=neo4j&logoColor=white)](https://neo4j.com)
 [![Redis](https://img.shields.io/badge/Redis-DC382D?style=for-the-badge&logo=redis&logoColor=white)](https://redis.io)
 [![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com)
-[![PyTest](https://img.shields.io/badge/PyTest-111%20Tests%20Passed-0A9EDC?style=for-the-badge&logo=pytest&logoColor=white)](https://docs.pytest.org)
+[![PyTest](https://img.shields.io/badge/PyTest-200%20Tests%20Passed-0A9EDC?style=for-the-badge&logo=pytest&logoColor=white)](https://docs.pytest.org)
 [![Code Style: Black](https://img.shields.io/badge/code%20style-black-000000.svg?style=for-the-badge)](https://github.com/psf/black)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
 
@@ -96,7 +96,7 @@ flowchart TB
 ### 🛡️ Multi-Layer Security & AML Compliance
 - **PEP & Sanctions Screening**: Automatic match verification against sanctions datasets (OFAC, EU, UN).
 - **MASAK & Regulatory Audit Logging**: Immutable compliance audit records with configurable retention.
-- **Role-Based Access Control (RBAC)**: Fine-grained JWT authentication (`admin`, `analyst`, `auditor`).
+- **Role-Based Access Control (RBAC)**: JWT authentication with role enforcement on every data route (`viewer` = read-only, `analyst` = investigate, `admin` = manage). Transaction ingestion additionally supports `X-API-Key` for service accounts.
 
 ### 📊 Explainable AI & MLOps
 - **SHAP Feature Explanations**: Provides analysts with exact feature contributions for every flagged fraud score.
@@ -120,7 +120,7 @@ flowchart TB
 ## 💻 Technology Stack
 
 ### Backend & Core Logic
-- **Language**: Python 3.9+ / 3.10+
+- **Language**: Python 3.10+ (CI matrix: 3.10 / 3.11 / 3.12)
 - **API Framework**: FastAPI, Pydantic v2, Uvicorn
 - **ORM & Database**: SQLAlchemy 2.0 (Async), Alembic, PostgreSQL 16
 - **Cache & Key-Value**: Redis 7.2
@@ -160,6 +160,11 @@ cd sentinelflow
 cp .env.example .env
 ```
 
+> ⚠️ **Required secrets (fail-fast):** before starting anything, set these in `.env`
+> (generate with `python -c "import secrets; print(secrets.token_urlsafe(48))"`):
+> `POSTGRES_PASSWORD`, `NEO4J_PASSWORD`, `JWT_SECRET_KEY`.
+> Without them the app, detector and `docker compose` refuse to start by design.
+
 ---
 
 ### 2. Launch Infrastructure Services (Docker)
@@ -176,8 +181,8 @@ docker-compose ps
 | Service | Host Port | Description |
 | :--- | :--- | :--- |
 | **FastAPI Backend** | `8000` | REST API, WebSockets, OpenAPI docs (`/docs`) |
-| **Streamlit Dashboard** | `8501` | SOC Analyst Monitoring Interface |
-| **Next.js Web Portal** | `3000` | Modern Frontend Application |
+| **Streamlit Dashboard** | `8501` | SOC Analyst Monitoring Interface (local: `streamlit run src/sentinelflow/dashboard/app.py`) |
+| **Next.js Web Portal** | `3000` | Modern Frontend Application (`--profile frontend`) |
 | **Kafka Broker** | `9092` | Event Streaming Bus |
 | **Kafka UI** | `8080` | Web UI for Topic & Message Inspection |
 | **Neo4j Graph DB** | `7474` (HTTP), `7687` (Bolt) | Graph Database Browser |
@@ -202,8 +207,8 @@ pip install -e ".[dev]"
 # Run database migrations
 alembic upgrade head
 
-# Seed initial admin user
-python scripts/seed_admin.py
+# Seed initial admin user (prints a generated password if SEED_ADMIN_PASSWORD unset)
+SEED_ADMIN_PASSWORD=<strong-password> python scripts/seed_admin.py
 ```
 
 ---
@@ -241,19 +246,23 @@ Interactive API Swagger documentation is available at `http://localhost:8000/doc
 
 | Method | Endpoint | Description | Auth Required |
 | :--- | :--- | :--- | :--- |
+| `POST` | `/api/v1/transactions` | Submit a transaction for fraud analysis (JWT or `X-API-Key`) | 🔒 |
 | `POST` | `/api/v1/auth/login` | Authenticate user & receive JWT access token | ❌ |
-| `GET` | `/api/v1/alerts` | List detected fraud alerts with filtering options | 🔒 |
-| `GET` | `/api/v1/alerts/{alert_id}` | Retrieve detailed alert information with SHAP explanation | 🔒 |
-| `POST` | `/api/v1/cases` | Create a new fraud investigation case | 🔒 |
-| `GET` | `/api/v1/graph/circular` | Query graph database for money laundering rings | 🔒 |
-| `POST` | `/api/v1/kyc/screen` | Perform PEP & Sanctions screening on a customer | 🔒 |
+| `GET` | `/api/v1/alerts` | List detected fraud alerts with filtering options (viewer+) | 🔒 |
+| `GET` | `/api/v1/alerts/{alert_id}` | Retrieve detailed alert information with SHAP explanation (viewer+) | 🔒 |
+| `POST` | `/api/v1/alerts/{alert_id}/dismiss` | Dismiss an alert as false positive (analyst+) | 🔒 |
+| `POST` | `/api/v1/cases` | Create a new fraud investigation case (analyst+) | 🔒 |
+| `GET` | `/api/v1/graph/rings` | Query graph database for money laundering rings (viewer+) | 🔒 |
+| `GET` | `/api/v1/graph/data` | Transaction network graph data for visualization (viewer+) | 🔒 |
+| `POST` | `/api/v1/kyc/screen` | Perform PEP & Sanctions screening on a customer (analyst+) | 🔒 |
+| `POST` | `/api/v1/risk/score` | Score a transaction with the risk engine (analyst+) | 🔒 |
 | `GET` | `/metrics` | Prometheus operational & detection metrics | ❌ |
 
 ---
 
 ## 🧪 Testing & Quality Assurance
 
-SentinelFlow includes a comprehensive automated test suite with **111+ unit, integration, and ML validation tests**.
+SentinelFlow includes a comprehensive automated test suite with **200+ unit, integration, and ML validation tests** (including JWT/RBAC auth tests in `tests/test_api_auth.py`).
 
 ```bash
 # Run complete test suite with coverage
@@ -261,6 +270,7 @@ pytest --cov=src/sentinelflow --cov-report=term-missing
 
 # Run specific test suites
 pytest tests/test_api.py        # API Endpoints
+pytest tests/test_api_auth.py   # JWT Auth, RBAC & KYC/CORS tests
 pytest tests/test_ml_models.py  # ML Engine & Ensembles
 pytest tests/test_compliance.py # KYC & MASAK Audit
 pytest tests/test_federated.py  # Federated Learning
@@ -286,10 +296,10 @@ mypy src/
 sentinelflow/
 ├── .github/workflows/         # CI/CD & Automated ML Pipeline
 ├── alembic/                   # PostgreSQL Database Migration Scripts
-├── data/                      # Sample Datasets & Benchmark Files
+├── data/                      # Sample Datasets & Benchmark Files (gitignored, generated)
 ├── docker-compose.yml         # Container Infrastructure Configuration
 ├── Dockerfile                 # SentinelFlow Microservice Container Image
-├── models/                    # Serialized Machine Learning Models
+├── models/                    # Serialized Machine Learning Models (gitignored, generated)
 ├── pyproject.toml             # Project Metadata & Python Dependencies
 ├── README.md                  # Project Documentation
 ├── scripts/                   # Utility, Training & Seeding Scripts
@@ -303,7 +313,7 @@ sentinelflow/
 │   └── package.json           # Frontend Dependencies
 │
 ├── src/sentinelflow/          # Core Python Source Package
-│   ├── api/                   # FastAPI Backend Application & Routes
+│   ├── api/                   # FastAPI Backend Application & Routes (incl. KYC)
 │   ├── auth/                  # JWT Authentication & Password Utilities
 │   ├── compliance/            # MASAK Audit Logging & Compliance Logic
 │   ├── config/                # Pydantic Settings & Environment Loaders
@@ -317,7 +327,7 @@ sentinelflow/
 │   ├── processor/             # Main Fraud Detector Engine (Neo4j, Redis, ML)
 │   └── dashboard/             # Streamlit Analyst Dashboard
 │
-└── tests/                     # Test Suite (111 Tests)
+└── tests/                     # Test Suite (200+ tests, incl. JWT auth tests)
 ```
 
 ---
@@ -339,6 +349,23 @@ Key configuration parameters (set in `.env`):
 | `IMPOSSIBLE_TRAVEL_MAX_SPEED_KMH` | Max travel speed threshold ($km/h$) | `900` |
 | `CIRCULAR_TRANSACTION_MIN_DEPTH` | Minimum money ring cycle length | `3` |
 | `JWT_SECRET_KEY` | Secret key for auth tokens | *Configurable* |
+
+---
+
+## 👥 Team Workflow
+
+This project is set up for multi-developer contribution. Read
+[CONTRIBUTING.md](CONTRIBUTING.md) before your first PR.
+
+- **Branching**: `feature/*` → PR → `develop` → release PR → `main` (both protected, CI-gated)
+- **Reviews**: enforced by [.github/CODEOWNERS](.github/CODEOWNERS) per domain
+- **API contract**: FastAPI OpenAPI is the single source of truth — after changing routes run
+  `python scripts/export_openapi.py` and commit `sentinelflow-web/src/lib/api-schema.ts`;
+  CI fails on stale schemas
+- **Quality gates**: black + ruff + mypy (pre-commit), pytest with coverage floor,
+  `tsc --noEmit` + ESLint + Next build for the frontend
+- **Decisions**: architectural choices are recorded in [docs/adr/](docs/adr/)
+- **Releases**: documented in [CHANGELOG.md](CHANGELOG.md) (Conventional Commits required)
 
 ---
 
