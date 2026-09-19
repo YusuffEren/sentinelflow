@@ -1,0 +1,25 @@
+# Node / build artifacts
+node_modules
+.next
+out
+build
+
+# Env & local files
+.env
+.env.*
+*.local
+
+# VCS / editor
+.git
+.gitignore
+.vscode
+.idea
+
+# Docker self-reference
+Dockerfile
+.dockerignore
+
+# Misc
+npm-debug.log
+*.tsbuildinfo
+README.md
