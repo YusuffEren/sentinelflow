@@ -190,6 +190,35 @@ class StatsResponse(BaseModel):
 
 
 # =============================================================================
+# KYC / Screening Schemas
+# =============================================================================
+
+
+class KYCScreenRequest(BaseModel):
+    """Request to screen a customer against PEP & sanctions lists."""
+
+    name: str = Field(..., min_length=2, max_length=200, description="Customer full name")
+    country: str | None = Field(default=None, description="Country (ISO or name)")
+    additional_info: dict[str, Any] | None = Field(
+        default=None, description="Optional context (dob, id number, etc.)"
+    )
+
+
+class KYCScreenResponse(BaseModel):
+    """Screening result combining PEP + sanctions checks."""
+
+    screening_id: str
+    query_name: str
+    screening_types: list[str]
+    has_matches: bool
+    matches_count: int
+    matches: list[dict[str, Any]] = Field(default_factory=list)
+    risk_score: float = Field(default=0.0, ge=0.0, le=100.0)
+    recommendation: str = ""
+    screened_at: str = ""
+
+
+# =============================================================================
 # WebSocket Message Schemas
 # =============================================================================
 
@@ -261,6 +290,9 @@ __all__ = [
     "ComponentStatus",
     "HealthResponse",
     "StatsResponse",
+    # KYC
+    "KYCScreenRequest",
+    "KYCScreenResponse",
     # WebSocket
     "WSMessage",
     "WSAlertMessage",
