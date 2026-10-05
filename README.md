@@ -13,7 +13,7 @@
 [![Neo4j](https://img.shields.io/badge/Neo4j-008CC1?style=for-the-badge&logo=neo4j&logoColor=white)](https://neo4j.com)
 [![Redis](https://img.shields.io/badge/Redis-DC382D?style=for-the-badge&logo=redis&logoColor=white)](https://redis.io)
 [![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com)
-[![PyTest](https://img.shields.io/badge/PyTest-200%20Tests%20Passed-0A9EDC?style=for-the-badge&logo=pytest&logoColor=white)](https://docs.pytest.org)
+[![PyTest](https://img.shields.io/badge/PyTest-170%20Tests%20Passed-0A9EDC?style=for-the-badge&logo=pytest&logoColor=white)](https://docs.pytest.org)
 [![Code Style: Black](https://img.shields.io/badge/code%20style-black-000000.svg?style=for-the-badge)](https://github.com/psf/black)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
 
@@ -262,7 +262,7 @@ Interactive API Swagger documentation is available at `http://localhost:8000/doc
 
 ## 🧪 Testing & Quality Assurance
 
-SentinelFlow includes a comprehensive automated test suite with **200+ unit, integration, and ML validation tests** (including JWT/RBAC auth tests in `tests/test_api_auth.py`).
+SentinelFlow includes a comprehensive automated test suite with **170 unit, integration, and ML validation tests** (including JWT/RBAC auth tests in `tests/test_api_auth.py`).
 
 ```bash
 # Run complete test suite with coverage
@@ -327,7 +327,7 @@ sentinelflow/
 │   ├── processor/             # Main Fraud Detector Engine (Neo4j, Redis, ML)
 │   └── dashboard/             # Streamlit Analyst Dashboard
 │
-└── tests/                     # Test Suite (200+ tests, incl. JWT auth tests)
+└── tests/                     # Test Suite (170 tests, incl. JWT auth tests)
 ```
 
 ---
