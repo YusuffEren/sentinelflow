@@ -181,13 +181,16 @@ docker-compose ps
 | Service | Host Port | Description |
 | :--- | :--- | :--- |
 | **FastAPI Backend** | `8000` | REST API, WebSockets, OpenAPI docs (`/docs`) |
-| **Streamlit Dashboard** | `8501` | SOC Analyst Monitoring Interface (local: `streamlit run src/sentinelflow/dashboard/app.py`) |
 | **Next.js Web Portal** | `3000` | Modern Frontend Application (`--profile frontend`) |
 | **Kafka Broker** | `9092` | Event Streaming Bus |
 | **Kafka UI** | `8080` | Web UI for Topic & Message Inspection |
 | **Neo4j Graph DB** | `7474` (HTTP), `7687` (Bolt) | Graph Database Browser |
 | **Redis Server** | `6379` | GeoSpatial Indexing & Caching |
 | **Redis Commander** | `8081` | Web UI for Redis Key Exploration |
+| **Prometheus** | `9090` | Operational metrics & alert rules (`--profile monitoring`) |
+
+> **Streamlit Operations Hub** runs outside compose:
+> `streamlit run src/sentinelflow/dashboard/app.py` (port 8501).
 
 ---
 

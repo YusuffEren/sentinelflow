@@ -100,7 +100,7 @@ npm run dev
    $body = @{
      username = "viewer1"
      email = "viewer@test.com"
-     password = "Viewer123!"
+     password = "<viewer-password>"
      full_name = "Test Viewer"
      role = "viewer"
    } | ConvertTo-Json

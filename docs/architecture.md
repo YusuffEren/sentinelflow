@@ -1,281 +1,156 @@
-# SentinelFlow Mimari Dökümantasyonu
+# SentinelFlow Mimari Dokümantasyonu
 
-## 🏗️ Sistem Mimarisi
+Bu belge depodaki **gerçek** yapıyı yansıtır. Soyut hedefler değil, çalışan
+bileşenler anlatılmıştır.
 
-SentinelFlow, gerçek zamanlı finansal dolandırıcılık tespiti için tasarlanmış, bulut tabanlı mikroservis mimarisi kullanan bir sistemdir.
+## 1. Sistem Mimarisi
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           SentinelFlow Platform                              │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐   │
-│  │   REST API  │    │   Streamlit │    │   Kafka     │    │  Prometheus │   │
-│  │   Gateway   │    │  Dashboard  │    │  Consumer   │    │   Metrics   │   │
-│  │   :8000     │    │    :8501    │    │             │    │    :9090    │   │
-│  └──────┬──────┘    └──────┬──────┘    └──────┬──────┘    └──────┬──────┘   │
-│         │                  │                  │                  │          │
-│         └──────────────────┼──────────────────┼──────────────────┘          │
-│                            │                  │                              │
-│                    ┌───────▼──────────────────▼───────┐                     │
-│                    │         Fraud Detector           │                     │
-│                    │     (Core Detection Engine)      │                     │
-│                    └───────┬──────────────────┬───────┘                     │
-│                            │                  │                              │
-│         ┌──────────────────┼──────────────────┼──────────────────┐          │
-│         │                  │                  │                  │          │
-│  ┌──────▼──────┐    ┌──────▼──────┐    ┌──────▼──────┐    ┌──────▼──────┐   │
-│  │ ML Ensemble │    │ Graph Ring  │    │ Impossible  │    │ Compliance  │   │
-│  │   Models    │    │  Detector   │    │   Travel    │    │   Engine    │   │
-│  └──────┬──────┘    └──────┬──────┘    └──────┬──────┘    └──────┬──────┘   │
-│         │                  │                  │                  │          │
-│  ┌──────▼──────┐    ┌──────▼──────┐    ┌──────▼──────┐    ┌──────▼──────┐   │
-│  │  XGBoost    │    │   Neo4j     │    │    Redis    │    │   MASAK     │   │
-│  │ Autoencoder │    │   Graph     │    │   GeoCache  │    │   Module    │   │
-│  │ IsolationF. │    │   Database  │    │             │    │             │   │
-│  │  GNN/LSTM   │    │             │    │             │    │             │   │
-│  └─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘   │
-│                                                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart LR
+    subgraph Ingest["Veri Girişi"]
+        GEN["sentinelflow-generate\n(sentetik üretici)"]
+        HTTP["HTTP besleyiciler\n(http_gen / replay)"]
+    end
 
-                               External Services
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                                                                              │
-│  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐   │
-│  │   Apache    │    │   Neo4j     │    │   Redis     │    │  Jaeger/    │   │
-│  │   Kafka     │    │   5.x       │    │   7.x       │    │  Tempo      │   │
-│  │             │    │             │    │             │    │             │   │
-│  │   :9092     │    │   :7687     │    │   :6379     │    │   :4317     │   │
-│  └─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘   │
-│                                                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
+    subgraph Bus["Mesajlaşma"]
+        KAFKA[("Kafka\ntransactions")]
+    end
+
+    subgraph Engine["Tespit Motoru"]
+        DET["processor/detector\n(Kafka tüketici + motor)"]
+        GRAPH["processor/graph_engine\n(Neo4j döngü tespiti)"]
+        GEO["processor/redis_geo\n(imkansız seyahat)"]
+        ML["ml/ensemble\n(IF + XGBoost + AutoEncoder)"]
+        KW["Kelime/karaliste tarayıcı"]
+    end
+
+    subgraph Store["Kalıcılık"]
+        PG[("PostgreSQL\nalert / case / kullanıcı")]
+        NEO[("Neo4j\n:User -[:SENT]-> :User")]
+        RDS[("Redis\nkonum + geo indeksi")]
+    end
+
+    subgraph Serve["Sunum"]
+        API["FastAPI :8000\nREST + WebSocket"]
+        WEB["Next.js :3000\n(frontend profili)"]
+        ST["Streamlit :8501\n(yerel çalışır)"]
+    end
+
+    GEN --> KAFKA
+    HTTP -->|X-API-Key| API
+    KAFKA --> DET
+    DET --> GRAPH & GEO & ML & KW
+    GRAPH --> NEO
+    GEO --> RDS
+    DET --> PG
+    API --> PG & NEO & RDS
+    WEB -->|REST/WS| API
+    ST -->|REST| API
 ```
 
-## 📦 Modül Yapısı
+## 2. Modül Yapısı (gerçek)
 
 ```
-sentinelflow/
-├── api/                    # REST API (FastAPI)
-│   ├── app.py             # Ana uygulama
-│   ├── routes/            # API rotaları
-│   └── middleware/        # Middleware'ler
-│
-├── core/                   # Çekirdek Bileşenler
-│   ├── detector.py        # Ana fraud detector
-│   ├── feature_extractor.py # Özellik çıkarma
-│   └── transaction.py     # Veri modelleri
-│
-├── ml/                     # Makine Öğrenmesi
-│   ├── models.py          # IF, XGBoost, AutoEncoder
-│   ├── ensemble.py        # Ensemble oylama
-│   ├── explainer.py       # SHAP açıklayıcı
-│   ├── gnn_model.py       # Graph Neural Network
-│   ├── temporal_model.py  # LSTM/Transformer
-│   └── federated/         # Federated Learning
-│
-├── patterns/              # Fraud Pattern Detectors
-│   ├── ring_detector.py   # Döngüsel halka tespiti
-│   ├── mule_detector.py   # Katır hesap tespiti
-│   └── travel_detector.py # İmkansız seyahat
-│
-├── compliance/            # Uyum Modülü
-│   ├── masak.py          # MASAK STR raporlama
-│   ├── engine.py         # Uyum motoru
-│   └── audit.py          # Denetim günlüğü
-│
-├── kyc/                   # KYC/AML Modülü
-│   ├── risk_scorer.py    # Risk skorlama
-│   ├── cdd.py            # Müşteri durum tespiti
-│   └── screening.py      # Liste tarama
-│
-├── security/              # Güvenlik
-│   ├── auth.py           # JWT kimlik doğrulama
-│   ├── rate_limit.py     # Hız sınırlama
-│   └── validation.py     # Girdi doğrulama
-│
-├── monitoring/            # İzleme
-│   ├── metrics.py        # Prometheus metrikleri
-│   ├── tracing.py        # OpenTelemetry
-│   └── logging.py        # Yapılandırılmış loglama
-│
-└── dashboard/             # Streamlit Dashboard
-    ├── app.py            # Ana dashboard
-    ├── components.py     # UI bileşenleri
-    └── i18n.py           # Çoklu dil desteği
+src/sentinelflow/
+├── api/            # FastAPI uygulaması, rotalar, şemalar, risk_scoring
+├── auth/           # JWT (python-jose), parola (passlib), rol bağımlılıkları
+├── compliance/     # MASAK raporlama, uyum motoru, audit kayıtçıları
+├── config/         # Pydantic-settings (.env) — Settings grupları
+├── contracts/      # Domain Pydantic modelleri (Transaction, Alert, Case, User…)
+├── database/       # SQLAlchemy async modeller + PostgreSQL oturumu, Alembic
+├── detectors/      # İnce CLI kabuğu (python -m sentinelflow.detectors)
+├── generator/      # Sentetik işlem üretici (CLI: sentinelflow-generate)
+├── ingestor/       # Kafka → API köprüsü (X-API-Key ile besler)
+├── kyc/            # PEP/yaptırım listesi taraması, CDD, risk skoru
+├── ml/             # Özellik motoru, ensemble, GNN, temporal, federated/
+├── mlops/          # Deney takibi, model registry, drift, A/B, feature store
+├── monitoring/     # Prometheus metrik, OTel tracing, yapılandırılmış log
+├── processor/      # Ana motor: detector, graph_engine, redis_geo, alert_writer
+├── repository/     # Alert/Case/Event kalıcı katman soyutlamaları
+└── dashboard/      # Streamlit operasyon paneli (app.py + i18n)
 ```
 
-## 🔄 Veri Akışı
+Not: `patterns/`, `core/`, `middleware/`, `security/` gibi paketler **yoktur**;
+işlevleri yukarıdaki `processor/`, `contracts/` ve `auth/` altında toplanmıştır.
 
-### 1. İşlem Alımı
-```
-Bank System → Kafka → Transaction Consumer → Feature Extractor
-```
-
-### 2. Fraud Analizi
-```
-Feature Extractor → ML Ensemble → Pattern Detectors → Risk Score
-                 → GNN Model   →
-                 → Temporal    →
-```
-
-### 3. Alarm Üretimi
-```
-Risk Score → Fraud Detector → Alert Generator → Kafka
-                            → Compliance Check → MASAK
-                            → Dashboard Update
-```
-
-## 🧠 ML Model Pipeline
+## 3. İşlem Akışı
 
 ```
-                    ┌─────────────────────────────────────────┐
-                    │           Feature Engineering            │
-                    │                                         │
-                    │  ┌─────────┐ ┌─────────┐ ┌───────────┐ │
-                    │  │ Amount  │ │Temporal │ │ Velocity  │ │
-                    │  │Features │ │Features │ │ Features  │ │
-                    │  └────┬────┘ └────┬────┘ └─────┬─────┘ │
-                    │       └───────────┼───────────┘        │
-                    └───────────────────┼────────────────────┘
-                                        │
-                    ┌───────────────────▼────────────────────┐
-                    │           ML Ensemble Voting            │
-                    │                                         │
-                    │  ┌─────────────┐ ┌─────────────┐       │
-                    │  │ Isolation   │ │  XGBoost    │       │
-                    │  │   Forest    │ │ Classifier  │       │
-                    │  │   (0.3)     │ │   (0.4)     │       │
-                    │  └──────┬──────┘ └──────┬──────┘       │
-                    │         │               │               │
-                    │  ┌──────┴───────────────┴──────┐       │
-                    │  │        AutoEncoder          │       │
-                    │  │      Reconstruction         │       │
-                    │  │          (0.3)              │       │
-                    │  └──────────────┬──────────────┘       │
-                    │                 │                       │
-                    │  ┌──────────────▼──────────────┐       │
-                    │  │      Weighted Voting        │       │
-                    │  │    final_score = Σ(wi*pi)   │       │
-                    │  └──────────────┬──────────────┘       │
-                    └─────────────────┼──────────────────────┘
-                                      │
-                    ┌─────────────────▼──────────────────────┐
-                    │          SHAP Explainability           │
-                    │  "Why was this flagged as fraud?"      │
-                    └────────────────────────────────────────┘
+İşlem olayı
+  ├─ Kafka(topic=transactions) ─→ processor/detector
+  │       ├─ graph_engine  → Neo4j döngüsel halka tespiti (3-6 hop, 7 gün)
+  │       ├─ redis_geo     → imkansız seyahat (> 900 km/h)
+  │       ├─ kelime taraması → şüpheli açıklama kalıpları
+  │       └─ ml/ensemble   → anomali skoru + risk ağırlığı
+  └─ POST /api/v1/transactions (doğrudan, senkron skor döner)
+
+Toplam risk skoru → alert_writer → PostgreSQL(alert) + Kafka(alerts)
+                 → WebSocket /ws/alerts üzerinden canlı yayın
 ```
 
-## 🌐 Graph Analysis (Neo4j)
+## 4. ML Pipeline
 
-```cypher
-// Döngüsel halka tespit sorgusu
-MATCH path = (start:Account)-[:TRANSFER*2..6]->(start)
-WHERE ALL(r IN relationships(path) WHERE r.timestamp > $threshold)
-WITH path, 
-     REDUCE(total = 0, r IN relationships(path) | total + r.amount) AS ring_amount
-RETURN path, ring_amount
-ORDER BY ring_amount DESC
-```
+Özellik çıkarma (`ml/feature_engine`) 21 boyutlu vektör üretir. Ensemble
+oylaması ağırlıklı:
 
-## 📊 Monitoring Stack
+| Model | Ağırlık | Not |
+| --- | --- | --- |
+| IsolationForest | 0.4 | Denetimsiz anomali |
+| XGBoost | 0.4 | Denetimli sınıflandırma |
+| AutoEncoder | 0.2 | Yeniden yapılandırma hatası |
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                    Observability Stack                          │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│  Application        Prometheus         Grafana                  │
-│  ┌──────────┐      ┌──────────┐       ┌──────────┐             │
-│  │ Metrics  │ ───► │  Scrape  │ ───►  │Dashboard │             │
-│  │ /metrics │      │  Store   │       │  View    │             │
-│  └──────────┘      └──────────┘       └──────────┘             │
-│                                                                  │
-│  ┌──────────┐      ┌──────────┐       ┌──────────┐             │
-│  │  Traces  │ ───► │ Jaeger/  │ ───►  │  Trace   │             │
-│  │  (OTLP)  │      │  Tempo   │       │  View    │             │
-│  └──────────┘      └──────────┘       └──────────┘             │
-│                                                                  │
-│  ┌──────────┐      ┌──────────┐       ┌──────────┐             │
-│  │   Logs   │ ───► │   Loki   │ ───►  │   Log    │             │
-│  │  (JSON)  │      │          │       │  Search  │             │
-│  └──────────┘      └──────────┘       └──────────┘             │
-│                                                                  │
-└─────────────────────────────────────────────────────────────────┘
-```
+Ağır bağımlılıklar (torch, lightgbm, catboost, shap…) **opsiyoneldir**;
+kurulu değilse ilgili model devre dışı kalır, motor kalanlarla çalışır
+(`ml/models.py`, `ml/advanced_models.py` içinden korumalı import'lar).
+GNN (`ml/gnn_model.py`) ve temporal (`ml/temporal_model.py`) modeller eğitim
+scriptlerinden çağrılır; federated öğrenme `ml/federated/` altında simüle edilir.
 
-## 🔐 Güvenlik Mimarisi
+## 5. Graf Analizi (Neo4j)
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                      Security Layers                             │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│  Request → Rate Limiter → JWT Auth → Input Validation → Handler │
-│                                                                  │
-│  ┌──────────────────────────────────────────────────────────┐   │
-│  │  Rate Limiting: 100 req/min per IP                       │   │
-│  │  JWT: HS256, 30min expiry, role-based scopes            │   │
-│  │  Input: Pydantic validation + sanitization              │   │
-│  │  Secrets: Environment variables / Vault                  │   │
-│  └──────────────────────────────────────────────────────────┘   │
-│                                                                  │
-└─────────────────────────────────────────────────────────────────┘
-```
+Gerçek şema (bkz. `scripts/init_neo4j_schema.cypher`, compose'da ilk açılışta
+otomatik yüklenir):
 
-## 🚀 Deployment
+- Düğümler: `:User {iban}` — ayrıca `:Account`, `:Transaction`, `:Customer` indeksleri
+- İlişki: `(a:User)-[:TRANSACTION]->(b:User)` / motor `:SENT` kenarlarıyla yazar
+- Döngü tespiti: `processor/graph_engine.py` içinde `detect_fraud_rings()`;
+  APOC kuruluysa prosedür, değilse saf Cypher fallback (`_detect_rings_without_apoc`)
 
-### Docker Compose (Geliştirme)
-```yaml
-services:
-  api:
-    image: sentinelflow:latest
-    ports: ["8000:8000"]
-    
-  dashboard:
-    image: sentinelflow:latest
-    command: streamlit run dashboard/app.py
-    ports: ["8501:8501"]
-    
-  neo4j:
-    image: neo4j:5.15.0
-    ports: ["7474:7474", "7687:7687"]
-    
-  redis:
-    image: redis:7.2
-    ports: ["6379:6379"]
-    
-  kafka:
-    image: confluentinc/cp-kafka:7.5.0
-```
+## 6. İzleme (Monitoring)
 
-### Kubernetes (Üretim)
-```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: sentinelflow-api
-spec:
-  replicas: 3
-  selector:
-    matchLabels:
-      app: sentinelflow-api
-  template:
-    spec:
-      containers:
-      - name: api
-        image: ghcr.io/teknofest/sentinelflow:latest
-        resources:
-          limits:
-            memory: "1Gi"
-            cpu: "500m"
-```
+Bugün **fiilen çalışan**: API'nin `/metrics` uç noktası ve compose'da
+`--profile monitoring` ile açılan Prometheus (`config/prometheus.yml`,
+`api:8000` hedefini tarar, `config/prometheus_alerts.yml` ile uyarı kuralları).
 
-## 📈 Performans Metrikleri
+`src/sentinelflow/monitoring/` içinde hazır modüller vardır (Prometheus
+collector, OpenTelemetry tracer, JSON logger) ancak henüz ana API yoluna
+bağlanmamışlardır; bir sonraki gelişme adımı budur.
 
-| Metrik | Hedef | Mevcut |
-|--------|-------|--------|
-| İşlem Latansı | <100ms | ~45ms |
-| ML Tahmin Süresi | <50ms | ~25ms |
-| Fraud Tespit Oranı | >95% | 97.2% |
-| False Positive | <2% | 1.3% |
-| Sistem Uptime | 99.9% | 99.95% |
+## 7. Güvenlik
+
+- **JWT**: HS256, erişim token'ı 30 dk, refresh 7 gün (`auth/config.py`).
+  `JWT_SECRET_KEY` tanımlı değilse uygulama **başlamayı reddeder** (sessiz varsayılan yok).
+- **Roller**: `viewer` < `analyst` < `admin`; her korumalı rotada
+  `auth/dependencies.py` üzerinden zorlanır.
+- **Besleme**: `POST /api/v1/transactions` JWT veya `X-API-Key` kabul eder.
+- **Secrets**: yalnızca `.env`/ortam değişkeni (bkz. `.env.example`);
+  compose `:?` ile zorunlu tutar.
+- **CORS**: `CORS_ORIGINS` beyaz listesi; `*` seçilirse credentials kapanır.
+- Şimdilik **rate limiting yoktur** (backlog maddesi).
+
+## 8. Dağıtım
+
+Docker Compose servisleri (bkz. `docker-compose.yml`):
+`postgres`, `zookeeper`, `kafka`, `kafka-ui`, `neo4j`, `redis`,
+`redis-commander`, `prometheus` (profil: `monitoring`), `api`,
+`frontend` (profil: `frontend`).
+
+Streamlit paneli compose dışındadır: `streamlit run src/sentinelflow/dashboard/app.py`.
+
+Kubernetes manifestleri henüz depoda yoktur; CI'ın ürettiği `ghcr.io` imajı
+böyle bir dağıtım için hazırlandı.
+
+## 9. Ölçümler
+
+Performans/ölçüm iddiaları için bkz. `docs/benchmark.md` ve `docs/ml_model_cards.md`.
+Bu belgeye sabit sayı kopyalamaktan kaçınılır; ölçümler tekrar üretilebilir
+script'lerle belgelenir.
