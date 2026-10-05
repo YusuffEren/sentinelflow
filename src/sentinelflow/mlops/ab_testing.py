@@ -493,7 +493,7 @@ class ABTestManager:
     def _hash_based_selection(self, test: ABTest, user_id: str) -> Variant:
         """Select variant based on user ID hash."""
         hash_input = f"{test.test_id}_{user_id}"
-        hash_value = int(hashlib.md5(hash_input.encode()).hexdigest(), 16)
+        hash_value = int(hashlib.md5(hash_input.encode(), usedforsecurity=False).hexdigest(), 16)
         bucket = (hash_value % 100) / 100.0
 
         cumulative = 0.0

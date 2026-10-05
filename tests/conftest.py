@@ -8,6 +8,11 @@ from unittest.mock import MagicMock
 import numpy as np
 import pytest
 
+# Real JWT flows (test_api_auth.py) sign and verify tokens, and the auth stack
+# fail-fasts on an empty JWT_SECRET_KEY. Provide a test-only key BEFORE any
+# sentinelflow import happens.
+os.environ.setdefault("JWT_SECRET_KEY", "test-only-jwt-secret-not-for-production")
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 

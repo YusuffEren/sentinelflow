@@ -217,7 +217,8 @@ class IsolationForestModel(BaseFraudModel):
         """Load IsolationForest model and scaler from pickle."""
         try:
             with open(path, "rb") as f:
-                data = pickle.load(f)
+                # Self-saved trusted artifact only.
+                data = pickle.load(f)  # nosec B301
             self._model = data["model"]
             self._scaler = data["scaler"]
             self._is_fitted = True
@@ -270,7 +271,8 @@ class XGBoostFraudModel(BaseFraudModel):
             # Check if this is a pickle wrapper (contains model + scaler)
             if path.endswith(".pkl"):
                 with open(path, "rb") as f:
-                    data = pickle.load(f)
+                    # Self-saved trusted artifact only.
+                    data = pickle.load(f)  # nosec B301
                 self._model = data.get("model")
                 self._scaler = data.get("scaler")
                 self._is_fitted = True
@@ -426,7 +428,8 @@ class AutoEncoderModel(BaseFraudModel):
         """Load pre-trained AutoEncoder weights and scaler."""
         try:
             if HAS_TORCH and self._network is not None:
-                checkpoint = torch.load(path, map_location="cpu", weights_only=False)
+                # Self-saved checkpoint (contains a sklearn scaler object).
+                checkpoint = torch.load(path, map_location="cpu", weights_only=False)  # nosec B614
                 self._network.load_state_dict(checkpoint["model_state_dict"])
                 self._threshold = checkpoint.get("threshold", None)
                 self._scaler = checkpoint.get("scaler", self._scaler)

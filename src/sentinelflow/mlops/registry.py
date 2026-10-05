@@ -433,7 +433,8 @@ class ModelRegistry:
 
             # Load model
             with open(target.model_path, "rb") as f:
-                model = pickle.load(f)
+                # Registry stores only locally registered artifacts.
+                model = pickle.load(f)  # nosec B301
 
             logger.info(f"Loaded model: {name} v{target.version} ({target.stage.value})")
 

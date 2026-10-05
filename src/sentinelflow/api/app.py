@@ -152,6 +152,12 @@ async def lifespan(app: FastAPI):
     """App startup/shutdown lifecycle."""
     logger.info("SentinelFlow API starting...")
 
+    # Fail fast on missing secrets (no silent defaults): the app refuses to
+    # start without a JWT signing key. See .env.example for required values.
+    from sentinelflow.auth.config import auth_config
+
+    auth_config.ensure_ready()
+
     # Initialize database
     state.init_database()
 
@@ -554,7 +560,8 @@ def main():
         pass
     import uvicorn
 
-    host = os.getenv("SENTINELFLOW_API_HOST", "0.0.0.0")
+    # All-interfaces bind is intentional for containerized deploys.
+    host = os.getenv("SENTINELFLOW_API_HOST", "0.0.0.0")  # nosec
     port = int(os.getenv("SENTINELFLOW_API_PORT", "8000"))
 
     logger.info(f"Starting SentinelFlow API on {host}:{port}")

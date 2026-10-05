@@ -401,7 +401,8 @@ class FederatedServer:
             logger.warning(f"Model file not found: {path}")
             return
 
-        checkpoint = torch.load(path, map_location=self._device, weights_only=False)
+        # Self-saved checkpoint (contains non-tensor metadata).
+        checkpoint = torch.load(path, map_location=self._device, weights_only=False)  # nosec B614
 
         self.input_dim = checkpoint.get("input_dim", 21)
         self.hidden_dim = checkpoint.get("hidden_dim", 64)

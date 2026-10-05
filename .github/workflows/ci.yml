@@ -199,18 +199,21 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
 
-      - name: Install security tools
+      - name: Install project and security tools
         run: |
+          python -m pip install --upgrade pip
+          # Install the project so pip-audit scans the real dependency tree
+          # instead of a near-empty tooling environment.
+          pip install -e .
           pip install bandit pip-audit
 
       - name: Run Bandit security scan
         run: bandit -r src/sentinelflow -ll -ii
-        continue-on-error: true
 
       - name: Check dependencies for vulnerabilities
         run: pip-audit --desc
-        continue-on-error: true
 
   # ===========================================================================
   # Frontend Tests

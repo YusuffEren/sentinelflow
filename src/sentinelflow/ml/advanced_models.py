@@ -306,7 +306,8 @@ class LightGBMFraudModel(BaseFraudModel):
             scaler_path = path.replace(".txt", "_scaler.pkl")
             if os.path.exists(scaler_path):
                 with open(scaler_path, "rb") as f:
-                    self._scaler = pickle.load(f)
+                    # Self-saved trusted artifact only.
+                    self._scaler = pickle.load(f)  # nosec B301
 
             self._is_fitted = True
             logger.info(f"LightGBM model loaded from {path}")
@@ -848,7 +849,8 @@ class StackingEnsemble:
         """Ensemble'ı yükle."""
         try:
             with open(path, "rb") as f:
-                checkpoint = pickle.load(f)
+                # Self-saved trusted artifact only.
+                checkpoint = pickle.load(f)  # nosec B301
 
             self._meta_learner = checkpoint["meta_learner"]
             self._meta_scaler = checkpoint["meta_scaler"]

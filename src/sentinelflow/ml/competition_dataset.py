@@ -495,7 +495,9 @@ class CompetitionDatasetGenerator:
         channel = random.choices(CHANNELS, weights=[0.4, 0.25, 0.1, 0.05, 0.15, 0.05])[0]
 
         # Generate device ID
-        device_id = hashlib.md5(f"{sender_id}_{random.randint(1, 3)}".encode()).hexdigest()[:16]
+        device_id = hashlib.md5(
+            f"{sender_id}_{random.randint(1, 3)}".encode(), usedforsecurity=False
+        ).hexdigest()[:16]
 
         return SyntheticTransaction(
             transaction_id="",
@@ -593,9 +595,9 @@ class CompetitionDatasetGenerator:
             amount=round(amount, 2),
             description=random.choice(descriptions),
             channel="mobile",
-            device_id=hashlib.md5(f"new_device_{random.randint(1, 1000)}".encode()).hexdigest()[
-                :16
-            ],
+            device_id=hashlib.md5(
+                f"new_device_{random.randint(1, 1000)}".encode(), usedforsecurity=False
+            ).hexdigest()[:16],
             is_fraud=True,
             fraud_type=FraudPattern.PHISHING_FOLLOW,
             fraud_confidence=0.95,
@@ -650,7 +652,9 @@ class CompetitionDatasetGenerator:
             amount=round(amount, 2),
             description=random.choice(descriptions),
             channel="mobile",
-            device_id=hashlib.md5(f"{sender_id}_1".encode()).hexdigest()[:16],
+            device_id=hashlib.md5(f"{sender_id}_1".encode(), usedforsecurity=False).hexdigest()[
+                :16
+            ],
             is_fraud=True,
             fraud_type=FraudPattern.SOCIAL_ENGINEERING,
             fraud_confidence=0.90,
@@ -699,7 +703,9 @@ class CompetitionDatasetGenerator:
             amount=round(amount, 2),
             description=random.choice(descriptions),
             channel=random.choice(["web", "mobile", "eft"]),
-            device_id=hashlib.md5(f"{sender_id}_{random.randint(1, 5)}".encode()).hexdigest()[:16],
+            device_id=hashlib.md5(
+                f"{sender_id}_{random.randint(1, 5)}".encode(), usedforsecurity=False
+            ).hexdigest()[:16],
             is_fraud=True,
             fraud_type=FraudPattern.MONEY_MULE,
             fraud_confidence=0.85,
@@ -746,7 +752,9 @@ class CompetitionDatasetGenerator:
             amount=round(amount, 2),
             description="Havale",
             channel="web",
-            device_id=hashlib.md5(f"stolen_{random.randint(1, 10000)}".encode()).hexdigest()[:16],
+            device_id=hashlib.md5(
+                f"stolen_{random.randint(1, 10000)}".encode(), usedforsecurity=False
+            ).hexdigest()[:16],
             is_fraud=True,
             fraud_type=FraudPattern.ACCOUNT_TAKEOVER,
             fraud_confidence=0.92,
@@ -792,7 +800,9 @@ class CompetitionDatasetGenerator:
             amount=round(amount, 2),
             description="EFT",
             channel=random.choice(["mobile", "web", "eft"]),
-            device_id=hashlib.md5(f"{sender_id}_1".encode()).hexdigest()[:16],
+            device_id=hashlib.md5(f"{sender_id}_1".encode(), usedforsecurity=False).hexdigest()[
+                :16
+            ],
             is_fraud=True,
             fraud_type=FraudPattern.STRUCTURING,
             fraud_confidence=0.80,
@@ -840,7 +850,9 @@ class CompetitionDatasetGenerator:
             amount=round(amount, 2),
             description=random.choice(descriptions),
             channel="eft",
-            device_id=hashlib.md5(f"{sender_id}_1".encode()).hexdigest()[:16],
+            device_id=hashlib.md5(f"{sender_id}_1".encode(), usedforsecurity=False).hexdigest()[
+                :16
+            ],
             is_fraud=True,
             fraud_type=FraudPattern.CIRCULAR_RING,
             fraud_confidence=0.95,
@@ -883,7 +895,9 @@ class CompetitionDatasetGenerator:
             amount=round(amount, 2),
             description="International transfer",
             channel="web",
-            device_id=hashlib.md5(f"travel_{random.randint(1, 1000)}".encode()).hexdigest()[:16],
+            device_id=hashlib.md5(
+                f"travel_{random.randint(1, 1000)}".encode(), usedforsecurity=False
+            ).hexdigest()[:16],
             is_fraud=True,
             fraud_type=FraudPattern.IMPOSSIBLE_TRAVEL,
             fraud_confidence=0.98,
@@ -923,7 +937,9 @@ class CompetitionDatasetGenerator:
             amount=round(amount, 2),
             description="Özel transfer",
             channel=random.choice(["mobile", "web"]),
-            device_id=hashlib.md5(f"{sender_id}_1".encode()).hexdigest()[:16],
+            device_id=hashlib.md5(f"{sender_id}_1".encode(), usedforsecurity=False).hexdigest()[
+                :16
+            ],
             is_fraud=True,
             fraud_type=FraudPattern.HIGH_VALUE_ANOMALY,
             fraud_confidence=0.88,

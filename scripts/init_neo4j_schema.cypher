@@ -2,7 +2,7 @@
 // Neo4j Schema Initialization - SentinelFlow
 // =============================================================================
 // Run this after Neo4j is up to create indexes and constraints
-// Execute via: cat init_neo4j_schema.cypher | cypher-shell -u neo4j -p sentinelflow_secret_2024
+// Execute via: cat init_neo4j_schema.cypher | cypher-shell -u neo4j -p "$NEO4J_PASSWORD"
 
 // -----------------------------------------------------------------------------
 // Constraints - Ensure data integrity

@@ -900,7 +900,10 @@ class TemporalFraudModel:
             return
 
         try:
-            checkpoint = torch.load(path, map_location=self._device, weights_only=False)
+            # Self-saved checkpoint (contains non-tensor metadata).
+            checkpoint = torch.load(  # nosec B614
+                path, map_location=self._device, weights_only=False
+            )
 
             self._model_type = checkpoint.get("model_type", "lstm")
             self._input_dim = checkpoint.get("input_dim", 12)

@@ -6,7 +6,6 @@
 from datetime import timedelta
 from functools import lru_cache
 
-from loguru import logger
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -23,11 +22,16 @@ class AuthSettings(BaseSettings):
     )
     JWT_ALGORITHM: str = Field(default="HS256")
     JWT_ACCESS_EXPIRE_MINUTES: int = Field(default=30)
-    JWT_REFRESH_EXPIRE_DAYS: int = Field(default=7)
+    JWT_REFRESH_TOKEN_EXPIRE_DAYS: int = Field(default=7)
 
     # Convenience aliases used throughout the auth module
     @property
     def SECRET_KEY(self) -> str:
+        if not self.JWT_SECRET_KEY:
+            raise RuntimeError(
+                "JWT_SECRET_KEY is not configured. Set it in .env before starting "
+                "(see .env.example). Refusing to fall back to an insecure default."
+            )
         return self.JWT_SECRET_KEY
 
     @property
@@ -48,7 +52,11 @@ class AuthSettings(BaseSettings):
 
     @property
     def refresh_token_expire(self) -> timedelta:
-        return timedelta(days=self.JWT_REFRESH_EXPIRE_DAYS)
+        return timedelta(days=self.JWT_REFRESH_TOKEN_EXPIRE_DAYS)
+
+    def ensure_ready(self) -> None:
+        """Fail fast at startup when required secrets are missing."""
+        _ = self.SECRET_KEY
 
     # Security settings
     MAX_LOGIN_ATTEMPTS: int = 5
@@ -61,11 +69,3 @@ def _get_auth_config() -> AuthSettings:
 
 
 auth_config = _get_auth_config()
-
-if not auth_config.JWT_SECRET_KEY:
-    logger.warning(
-        "JWT_SECRET_KEY is empty – using insecure default for local development. "
-        "Set JWT_SECRET_KEY in .env before deploying."
-    )
-    # Provide a dev-only fallback so the app can still start locally
-    object.__setattr__(auth_config, "JWT_SECRET_KEY", "dev-only-insecure-key-do-not-deploy")
