@@ -158,6 +158,11 @@ class GraphEngine:
 
     def _connect(self) -> None:
         """Establish connection to Neo4j."""
+        if not HAS_NEO4J:
+            raise RuntimeError(
+                "The 'neo4j' driver package is not installed. "
+                "Install project dependencies first (pip install -e .)."
+            )
         try:
             self._driver = GraphDatabase.driver(
                 self._uri,

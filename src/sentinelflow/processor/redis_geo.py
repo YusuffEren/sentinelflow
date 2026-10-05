@@ -299,10 +299,10 @@ class RedisGeoClient:
 
         try:
             # Store as JSON with TTL
-            self._client.setex(
+            self._client.set(
                 key,
-                self._ttl_seconds,
                 json.dumps(location.to_dict()),
+                ex=self._ttl_seconds,
             )
 
             # Also store in Redis GEO set for proximity queries
