@@ -16,6 +16,7 @@ versioning follows [Semantic Versioning](https://semver.org/).
 
 ### Changed
 - Required secrets are now fail-fast: `POSTGRES_PASSWORD`, `NEO4J_PASSWORD`, `JWT_SECRET_KEY` (no silent defaults in app, detector, or compose).
+- Core modules split into ≤500-line packages for navigability (import paths unchanged): `processor/detector/` (types, checks, publishing, runtime, service, cli), `processor/graph_engine/` (types, cypher, engine), `api/risk_scoring/` (schemas, engine, routes). OpenAPI schema verified byte-identical.
 - Dependencies pruned to what is actually imported (dropped spacy, geopy, haversine, pyvis, slowapi, asyncio-throttle, aiofiles, hyperopt, tensorboard and the unused `[mlops]` extra).
 - Version unified at `2.1.0` across `pyproject.toml`, package `__version__`, the API and the Docker image.
 - `docs/api.md` and `docs/architecture.md` rewritten from the real route table and module layout (previous drafts described non-existent modules and services).
