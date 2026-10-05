@@ -1,6 +1,6 @@
 [project]
 name = "sentinelflow"
-version = "1.0.0"
+version = "2.1.0"
 description = "Enterprise-Grade Real-Time Financial Fraud Detection System"
 readme = "README.md"
 license = {text = "MIT"}
@@ -88,26 +88,8 @@ dependencies = [
     # =============================================================================
     "streamlit>=1.30.0",
     "plotly>=5.18.0",
-    "pyvis>=0.3.2",
     "networkx>=3.2.0",
     "matplotlib>=3.8.0",
-    
-    # =============================================================================
-    # NLP & Text Processing
-    # =============================================================================
-    "spacy>=3.7.0",
-    
-    # =============================================================================
-    # Async & Concurrency
-    # =============================================================================
-    "asyncio-throttle>=1.0.2",
-    "aiofiles>=23.2.1",
-    
-    # =============================================================================
-    # Geospatial
-    # =============================================================================
-    "geopy>=2.4.1",
-    "haversine>=2.8.1",
     
     # =============================================================================
     # Machine Learning & AI Pipeline
@@ -146,7 +128,6 @@ dependencies = [
     # passlib 1.7.4 is unmaintained and breaks with bcrypt>=4.1
     # (AttributeError: bcrypt has no __about__, 72-byte truncation errors).
     "bcrypt>=4.0.1,<4.1",
-    "slowapi>=0.1.9",
 ]
 
 [project.optional-dependencies]
@@ -164,17 +145,6 @@ dev = [
 ml = [
     # Additional ML tools for research/experimentation
     "optuna>=3.4.0",
-    "tensorboard>=2.15.0",
-    "hyperopt>=0.2.7",
-]
-
-mlops = [
-    # MLOps tools
-    "mlflow>=2.10.0",
-    "dvc>=3.40.0",
-    "great-expectations>=0.18.0",
-    "evidently>=0.4.0",
-    "joblib>=1.3.0",
 ]
 
 benchmark = [

@@ -16,7 +16,7 @@ Modules:
     - dashboard: Streamlit visualization
 """
 
-__version__ = "1.0.0"
+__version__ = "2.1.0"
 __author__ = "Teknofest Team"
 __email__ = "team@sentinelflow.dev"
 
