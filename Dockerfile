@@ -17,7 +17,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy project files needed for build
+# (README.md is required: pyproject declares `readme = "README.md"` and
+# hatchling fails metadata generation without it)
 COPY pyproject.toml ./
+COPY README.md ./
 COPY src/ ./src/
 
 # Build wheel

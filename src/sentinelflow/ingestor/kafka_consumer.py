@@ -6,11 +6,21 @@ import requests  # type: ignore[import-untyped]
 from confluent_kafka import Consumer, KafkaError
 from loguru import logger
 
-# Configuration
-KAFKA_BROKER = os.getenv("KAFKA_BROKER", "localhost:9092")
-TOPIC = os.getenv("KAFKA_TOPIC", "transactions")
+# Configuration (documented names from .env.example first; legacy aliases kept)
+KAFKA_BROKER = os.getenv("KAFKA_BOOTSTRAP_SERVERS", os.getenv("KAFKA_BROKER", "localhost:9092"))
+TOPIC = os.getenv("KAFKA_TOPIC_TRANSACTIONS", os.getenv("KAFKA_TOPIC", "transactions"))
 API_URL = os.getenv("API_URL", "http://localhost:8000/api/v1/transactions")
 GROUP_ID = "sentinelflow-ingestor"
+
+# Service-to-service ingestion auth: POST /api/v1/transactions rejects anonymous
+# requests (JWT bearer or X-API-Key required). Set SENTINELFLOW_API_KEY to the
+# same value as the API's.
+API_KEY = os.getenv("SENTINELFLOW_API_KEY", "")
+
+
+def api_headers() -> dict:
+    """Build request headers; attaches X-API-Key when configured."""
+    return {"X-API-Key": API_KEY} if API_KEY else {}
 
 
 def create_consumer() -> Consumer:
@@ -35,7 +45,7 @@ def process_message(msg_value: bytes):
         if "timestamp" in tx_data and not isinstance(tx_data["timestamp"], str):
             tx_data["timestamp"] = str(tx_data["timestamp"])
 
-        response = requests.post(API_URL, json=tx_data)
+        response = requests.post(API_URL, json=tx_data, headers=api_headers())
 
         if response.status_code == 200:
             result = response.json()

@@ -19,18 +19,19 @@ Usage:
 
 import argparse
 import json
+import os
 import random
-import time
 import sys
-from datetime import datetime, timezone, timedelta
+import time
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
 import requests
 from rich.console import Console
-from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn
-from rich.table import Table
 from rich.panel import Panel
+from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn
+from rich.table import Table
 
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
@@ -43,6 +44,8 @@ console = Console()
 
 API_BASE = "http://localhost:8000"
 KAFKA_TOPIC = "transactions"
+# Service-to-service ingestion auth (JWT bearer or X-API-Key required).
+API_KEY = os.getenv("SENTINELFLOW_API_KEY", "")
 
 # Turkish first names and surnames for realistic data
 FIRST_NAMES = [
@@ -279,6 +282,7 @@ def send_to_api(transaction: dict) -> dict:
         response = requests.post(
             f"{API_BASE}/api/v1/transactions",
             json=transaction,
+            headers={"X-API-Key": API_KEY} if API_KEY else {},
             timeout=10,
         )
         return response.json()

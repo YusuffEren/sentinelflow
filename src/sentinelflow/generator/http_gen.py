@@ -1,3 +1,4 @@
+import os
 import random
 import time
 from datetime import datetime
@@ -7,7 +8,9 @@ import requests  # type: ignore[import-untyped]
 from sentinelflow.generator.models import Transaction
 from sentinelflow.generator.patterns import FraudPatternMixer
 
-API_URL = "http://localhost:8000/api/v1/transactions"
+API_URL = os.getenv("API_URL", "http://localhost:8000/api/v1/transactions")
+# Service-to-service ingestion auth (JWT bearer or X-API-Key required).
+API_KEY = os.getenv("SENTINELFLOW_API_KEY", "")
 
 
 def send_transaction(tx: Transaction):
@@ -21,7 +24,8 @@ def send_transaction(tx: Transaction):
     data["receiver_account_id"] = str(data["receiver_account_id"])
 
     try:
-        response = requests.post(API_URL, json=data)
+        headers = {"X-API-Key": API_KEY} if API_KEY else {}
+        response = requests.post(API_URL, json=data, headers=headers)
         if response.status_code == 200:
             result = response.json()
             status = "FRAUD DETECTED" if result["is_fraud"] else "OK"

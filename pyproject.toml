@@ -79,6 +79,8 @@ dependencies = [
     "fastapi>=0.110.0",
     "uvicorn[standard]>=0.27.0",
     "httpx>=0.26.0",
+    # Used by the Kafka ingestor, HTTP generator and replay scripts.
+    "requests>=2.31.0",
     "python-multipart>=0.0.6",
     
     # =============================================================================
