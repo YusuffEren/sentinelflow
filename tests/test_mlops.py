@@ -88,22 +88,20 @@ class TestDriftDetector:
 class TestExperimentTracker:
     """Tests for ExperimentTracker."""
 
-    def test_create_experiment(self):
+    def test_create_experiment(self, tmp_path):
         from sentinelflow.mlops import ExperimentTracker
 
-        et = ExperimentTracker(
-            tracking_path=os.path.join(os.path.dirname(__file__), "..", "mlops_test", "experiments")
-        )
+        et = ExperimentTracker(tracking_path=str(tmp_path / "experiments"))
         exp = et.create_experiment(
             name="test-exp", description="Test", tags={"framework": "pytest"}
         )
         assert exp.name == "test-exp"
         assert exp.experiment_id is not None
 
-    def test_start_and_log(self):
+    def test_start_and_log(self, tmp_path):
         from sentinelflow.mlops import ExperimentTracker
 
-        path = os.path.join(os.path.dirname(__file__), "..", "mlops_test", "exps")
+        path = str(tmp_path / "exps")
         et = ExperimentTracker(tracking_path=path)
         et.create_experiment("test-exp")
 
@@ -113,10 +111,10 @@ class TestExperimentTracker:
             assert run.params["lr"] == 0.01
             assert run.metrics["accuracy"] == 0.95
 
-    def test_list_runs(self):
+    def test_list_runs(self, tmp_path):
         from sentinelflow.mlops import ExperimentTracker
 
-        path = os.path.join(os.path.dirname(__file__), "..", "mlops_test", "list2")
+        path = str(tmp_path / "list2")
         et = ExperimentTracker(tracking_path=path)
         et.create_experiment("multi-run")
         with et.start_run(experiment_name="multi-run", run_name="run-a"):
@@ -130,20 +128,18 @@ class TestExperimentTracker:
 class TestModelRegistry:
     """Tests for ModelRegistry."""
 
-    def test_initialization(self):
+    def test_initialization(self, tmp_path):
         from sentinelflow.mlops import ModelRegistry
 
-        mr = ModelRegistry(
-            registry_path=os.path.join(os.path.dirname(__file__), "..", "mlops_test", "registry")
-        )
+        mr = ModelRegistry(registry_path=str(tmp_path / "registry"))
         assert mr is not None
 
-    def test_register_and_list(self):
+    def test_register_and_list(self, tmp_path):
         from sklearn.ensemble import IsolationForest
 
         from sentinelflow.mlops import ModelRegistry
 
-        path = os.path.join(os.path.dirname(__file__), "..", "mlops_test", "reg")
+        path = str(tmp_path / "reg")
         mr = ModelRegistry(registry_path=path)
         model = IsolationForest(random_state=42)
 
