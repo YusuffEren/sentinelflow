@@ -54,7 +54,6 @@ flowchart LR
 src/sentinelflow/
 ├── api/            # FastAPI uygulaması, rotalar, şemalar, risk_scoring
 ├── auth/           # JWT (python-jose), parola (passlib), rol bağımlılıkları
-├── compliance/     # MASAK raporlama, uyum motoru, audit kayıtçıları
 ├── config/         # Pydantic-settings (.env) — Settings grupları
 ├── contracts/      # Domain Pydantic modelleri (Transaction, Alert, Case, User…)
 ├── database/       # SQLAlchemy async modeller + PostgreSQL oturumu, Alembic
@@ -64,14 +63,15 @@ src/sentinelflow/
 ├── kyc/            # PEP/yaptırım listesi taraması, CDD, risk skoru
 ├── ml/             # Özellik motoru, ensemble, GNN, temporal, federated/
 ├── mlops/          # Deney takibi, model registry, drift, A/B, feature store
-├── monitoring/     # Prometheus metrik, OTel tracing, yapılandırılmış log
 ├── processor/      # Ana motor: detector, graph_engine, redis_geo, alert_writer
 ├── repository/     # Alert/Case/Event kalıcı katman soyutlamaları
 └── dashboard/      # Streamlit operasyon paneli (app.py + i18n)
 ```
 
-Not: `patterns/`, `core/`, `middleware/`, `security/` gibi paketler **yoktur**;
-işlevleri yukarıdaki `processor/`, `contracts/` ve `auth/` altında toplanmıştır.
+Not: `patterns/`, `core/`, `middleware/`, `security/`, `compliance/`, `monitoring/`
+gibi paketler **yoktur**; çalışan işlevler yukarıdaki `processor/`, `contracts/`,
+`auth/` ve `kyc/` altında toplanmıştır. Kapsam dışı bırakılan modüller
+`archive/unwired-features-20261005` etiketinde saklanır.
 
 ## 3. İşlem Akışı
 
@@ -121,9 +121,8 @@ Bugün **fiilen çalışan**: API'nin `/metrics` uç noktası ve compose'da
 `--profile monitoring` ile açılan Prometheus (`config/prometheus.yml`,
 `api:8000` hedefini tarar, `config/prometheus_alerts.yml` ile uyarı kuralları).
 
-`src/sentinelflow/monitoring/` içinde hazır modüller vardır (Prometheus
-collector, OpenTelemetry tracer, JSON logger) ancak henüz ana API yoluna
-bağlanmamışlardır; bir sonraki gelişme adımı budur.
+Zengin izleme paketi (Prometheus collector, OpenTelemetry tracer, JSON logger)
+şimdilik kapsam dışı bırakıldı; teker teker, çalışır halde geri eklenecek.
 
 ## 7. Güvenlik
 

@@ -24,6 +24,8 @@ versioning follows [Semantic Versioning](https://semver.org/).
 - README synced with actual routes, roles, versions and test counts.
 
 ### Removed
+- Unwired/broken feature modules parked for rebuild (working versions will be re-added one by one): `compliance/` (MASAK/audit, imported only by its own tests), `monitoring/` (Prometheus/OTel suite, nothing consumed it — `/metrics` is hand-rolled), `detectors/` CLI shim (passed `--topic`/`--group` flags the detector parser does not accept; advertised non-existent `graph`/`geo` subcommands), `ml/benchmark.py`, `ml/replay_producer.py`, `dashboard/competition_dashboard.py`, `generator/http_gen.py` (all zero external references). Sources preserved in the `archive/unwired-features-20261005` tag.
+- Unused observability dependencies with the monitoring package: `prometheus-client`, `opentelemetry-api/sdk/exporter-otlp`.
 - Dead CLI subcommands (`detectors graph|geo`) targeting non-existent entry points.
 - Echo-only CI jobs (`model-version`, `deploy-staging`, `deploy-production`).
 - Stray root launcher scripts (`*.bat`, `test_api.py`, `verify_kafka.py`, `scripts/live_test.py` — stale ports/paths), unused Next.js placeholder SVGs and the dead `src/sentinelflow/security/` duplicate-auth package with its tests.

@@ -13,7 +13,7 @@
 [![Neo4j](https://img.shields.io/badge/Neo4j-008CC1?style=for-the-badge&logo=neo4j&logoColor=white)](https://neo4j.com)
 [![Redis](https://img.shields.io/badge/Redis-DC382D?style=for-the-badge&logo=redis&logoColor=white)](https://redis.io)
 [![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com)
-[![PyTest](https://img.shields.io/badge/PyTest-170%20Tests%20Passed-0A9EDC?style=for-the-badge&logo=pytest&logoColor=white)](https://docs.pytest.org)
+[![PyTest](https://img.shields.io/badge/PyTest-146%20Tests%20Passed-0A9EDC?style=for-the-badge&logo=pytest&logoColor=white)](https://docs.pytest.org)
 [![Code Style: Black](https://img.shields.io/badge/code%20style-black-000000.svg?style=for-the-badge)](https://github.com/psf/black)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
 
@@ -30,7 +30,7 @@
 - 🔄 **Money Laundering Rings (AML)**: Circular fund flow detection ($A \rightarrow B \rightarrow C \rightarrow A$) using graph algorithms.
 - ✈️ **Impossible Travel Anomalies**: Geo-spatial velocity validation across consecutive card/transfer events via Redis Geo.
 - 🤖 **AI/ML Anomaly Scoring**: Multi-model ensembles (XGBoost, LightGBM, CatBoost, AutoEncoder, Isolation Forest) with SHAP explainability.
-- 📋 **KYC & Sanctions Compliance**: Real-time screening against PEP (Politically Exposed Persons), international sanction lists, and MASAK regulatory rules.
+- 📋 **KYC & Sanctions Compliance**: Real-time screening against PEP (Politically Exposed Persons) and international sanction lists (OFAC, EU, UN).
 - 🕸️ **Graph Neural Networks & Federated Learning**: Advanced graph embedding models and privacy-preserving multi-institutional model aggregation via Flower.
 
 ---
@@ -95,7 +95,6 @@ flowchart TB
 
 ### 🛡️ Multi-Layer Security & AML Compliance
 - **PEP & Sanctions Screening**: Automatic match verification against sanctions datasets (OFAC, EU, UN).
-- **MASAK & Regulatory Audit Logging**: Immutable compliance audit records with configurable retention.
 - **Role-Based Access Control (RBAC)**: JWT authentication with role enforcement on every data route (`viewer` = read-only, `analyst` = investigate, `admin` = manage). Transaction ingestion additionally supports `X-API-Key` for service accounts.
 
 ### 📊 Explainable AI & MLOps
@@ -265,7 +264,7 @@ Interactive API Swagger documentation is available at `http://localhost:8000/doc
 
 ## 🧪 Testing & Quality Assurance
 
-SentinelFlow includes a comprehensive automated test suite with **170 unit, integration, and ML validation tests** (including JWT/RBAC auth tests in `tests/test_api_auth.py`).
+SentinelFlow includes a comprehensive automated test suite with **146 unit, integration, and ML validation tests** (including JWT/RBAC auth tests in `tests/test_api_auth.py`).
 
 ```bash
 # Run complete test suite with coverage
@@ -275,7 +274,7 @@ pytest --cov=src/sentinelflow --cov-report=term-missing
 pytest tests/test_api.py        # API Endpoints
 pytest tests/test_api_auth.py   # JWT Auth, RBAC & KYC/CORS tests
 pytest tests/test_ml_models.py  # ML Engine & Ensembles
-pytest tests/test_compliance.py # KYC & MASAK Audit
+pytest tests/test_kyc.py        # KYC Screening
 pytest tests/test_federated.py  # Federated Learning
 ```
 
@@ -318,7 +317,6 @@ sentinelflow/
 ├── src/sentinelflow/          # Core Python Source Package
 │   ├── api/                   # FastAPI Backend Application & Routes (incl. KYC)
 │   ├── auth/                  # JWT Authentication & Password Utilities
-│   ├── compliance/            # MASAK Audit Logging & Compliance Logic
 │   ├── config/                # Pydantic Settings & Environment Loaders
 │   ├── contracts/             # Pydantic Schemas & Data Contracts
 │   ├── database/              # PostgreSQL Connection & ORM Models
@@ -326,11 +324,10 @@ sentinelflow/
 │   ├── ingestor/              # Kafka Ingestion & Event Bridge
 │   ├── kyc/                   # PEP & Sanctions Screening Engine
 │   ├── ml/                    # Machine Learning, GNN, SHAP & Federated Learning
-│   ├── monitoring/            # OpenTelemetry & Prometheus Metrics
 │   ├── processor/             # Main Fraud Detector Engine (Neo4j, Redis, ML)
 │   └── dashboard/             # Streamlit Analyst Dashboard
 │
-└── tests/                     # Test Suite (170 tests, incl. JWT auth tests)
+└── tests/                     # Test Suite (146 tests, incl. JWT auth tests)
 ```
 
 ---

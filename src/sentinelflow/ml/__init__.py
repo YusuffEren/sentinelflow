@@ -67,11 +67,6 @@ except ImportError:
     FraudExplainer = None
 
 try:
-    from sentinelflow.ml.replay_producer import DatasetReplayProducer
-except ImportError:
-    DatasetReplayProducer = None
-
-try:
     from sentinelflow.ml.train_pipeline import TrainPipeline
 except ImportError:
     TrainPipeline = None

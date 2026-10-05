@@ -3,10 +3,10 @@ import os, re
 
 test_dir = os.path.join(os.path.dirname(__file__), "..", "tests")
 modules = [
-    "api", "security", "ml", "compliance", "kyc",
-    "generator", "ingestor", "monitoring", "mlops",
+    "api", "ml", "kyc",
+    "generator", "ingestor", "mlops",
     "processor", "database", "repository", "auth",
-    "dashboard", "detectors",
+    "dashboard",
 ]
 
 coverage = {}
