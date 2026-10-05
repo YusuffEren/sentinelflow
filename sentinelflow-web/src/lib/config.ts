@@ -44,7 +44,6 @@ export const config = {
     // ML
     predict: "/api/v1/risk/score",
     modelInfo: "/api/v1/ml/models",
-    explain: "/api/v1/ml/explain",
     mlFeatures: "/api/v1/ml/features",
 
     // KYC

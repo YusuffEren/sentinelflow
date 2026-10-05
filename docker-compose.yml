@@ -137,6 +137,8 @@ services:
       - neo4j_data:/data
       - neo4j_logs:/logs
       - neo4j_plugins:/plugins
+      # Create constraints/indexes automatically on first boot.
+      - ./scripts/init_neo4j_schema.cypher:/docker-entrypoint-initdb.d/init_neo4j_schema.cypher:ro
     networks:
       - sentinelflow-network
     healthcheck:
@@ -242,6 +244,9 @@ services:
       REDIS_PORT: 6379
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:?Set JWT_SECRET_KEY in .env (see .env.example)}
       JWT_ALGORITHM: HS256
+      # Service-to-service ingestion auth (X-API-Key fallback for generators).
+      SENTINELFLOW_API_KEY: ${SENTINELFLOW_API_KEY:-}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
     networks:
       - sentinelflow-network
     healthcheck:

@@ -1,4 +1,7 @@
 # SentinelFlow Prometheus Configuration
+#
+# Consumed by the compose `prometheus` service (profile: monitoring).
+# Scrape targets use compose DNS names on the sentinelflow-network.
 
 global:
   scrape_interval: 15s
@@ -15,16 +18,9 @@ scrape_configs:
     static_configs:
       - targets: ['localhost:9090']
 
-  # SentinelFlow API metrics
+  # SentinelFlow API metrics (compose service: api, port 8000)
   - job_name: 'sentinelflow-api'
     static_configs:
-      - targets: ['host.docker.internal:8000']
-    metrics_path: '/metrics'
-    scrape_interval: 10s
-
-  # SentinelFlow Detector metrics (when running)
-  - job_name: 'sentinelflow-detector'
-    static_configs:
-      - targets: ['host.docker.internal:8001']
+      - targets: ['api:8000']
     metrics_path: '/metrics'
     scrape_interval: 10s
